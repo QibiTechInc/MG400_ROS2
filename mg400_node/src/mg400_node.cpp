@@ -116,7 +116,7 @@ CallbackReturn MG400Node::on_activate(const State &)
     }
     return CallbackReturn::FAILURE;
   }
-  
+
   this->runTimer();
 
   RCLCPP_INFO(this->get_logger(), "Connected to MG400 at %s", this->ip_address_.c_str());
