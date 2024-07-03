@@ -34,6 +34,9 @@ bool MG400Interface::configure(const std::string & frame_id_prefix)
   this->servo_error_msg_generator =
     std::make_unique<ErrorMsgGenerator>("alarm_servo.json");
 
+  this->dashboard_commander = std::make_shared<DashboardCommander>(this->dashboard_tcp_if_.get());
+  this->motion_commander = std::make_shared<MotionCommander>(this->motion_tcp_if_.get());
+
   return this->controller_error_msg_generator->loadJsonFile() &&
          this->servo_error_msg_generator->loadJsonFile();
 }
@@ -65,9 +68,6 @@ bool MG400Interface::activate()
       return false;
     }
   }
-
-  this->dashboard_commander = std::make_shared<DashboardCommander>(this->dashboard_tcp_if_.get());
-  this->motion_commander = std::make_shared<MotionCommander>(this->motion_tcp_if_.get());
 
   RCLCPP_INFO(this->getLogger(), "Connected to DOBOT MG400");
   return true;
