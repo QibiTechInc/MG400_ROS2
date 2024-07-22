@@ -44,6 +44,7 @@ private:
     "mg400_plugin::EnableRobot",
     "mg400_plugin::PayLoad",
     "mg400_plugin::ResetRobot",
+    "mg400_plugin::SetCollisionLevel",
     "mg400_plugin::SpeedFactor",
     "mg400_plugin::ToolDOExecute"
   };
