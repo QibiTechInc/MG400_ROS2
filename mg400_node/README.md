@@ -15,6 +15,7 @@ The following API interface plugin will be loaded by default
   - `EnableRobot`
   - `PayLoad`
   - `ResetRobot`
+  - `SetCollisionLevel`
   - `SpeedFactor`
   - `ToolDOExecute`
 - Motion API
