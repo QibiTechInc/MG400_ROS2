@@ -56,6 +56,9 @@ void GetAngle::onServiceCall(
       res->joint4 = joints[3];
       res->joint5 = joints[4];
       res->joint6 = joints[5];
+    } catch (const mg400_interface::DashboardCommandException & ex) {
+      RCLCPP_ERROR(this->node_logging_if_->get_logger(), ex.what());
+      res->error_id = ex.getDashboardResponse().error_id;
     } catch (const std::runtime_error & ex) {
       RCLCPP_ERROR(this->node_logging_if_->get_logger(), ex.what());
     } catch (...) {

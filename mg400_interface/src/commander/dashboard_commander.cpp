@@ -413,7 +413,7 @@ void DashboardCommander::evaluateResponse(const std::string & packet) const
   static DashboardResponse response;
   ResponseParser::parseResponse(packet, response);
   if (response.error_id != 0) {
-    throw std::runtime_error("Dobot Not return 0: " + std::to_string(response.error_id));
+    throw DashboardCommandException("Dobot Not return 0", response);
   }
 }
 }  // namespace mg400_interface

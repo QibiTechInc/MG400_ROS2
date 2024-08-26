@@ -5,3 +5,4 @@ float64 j4
 float64 j5
 float64 j6
 ---
+int32 error_id
