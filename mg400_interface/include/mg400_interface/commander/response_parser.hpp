@@ -44,15 +44,16 @@ public:
   : std::runtime_error(msg),
     response_(response)
   {
-    this->error_message_ = response_.func_name + " failed: "
-      + std::to_string(response_.error_id) + " " + response_.ret_val;
+    this->error_message_ = response_.func_name + " failed: " +
+      std::to_string(response_.error_id) + " " + response_.ret_val;
   }
 
-  const DashboardResponse & getDashboardResponse() const {
+  const DashboardResponse & getDashboardResponse() const
+  {
     return response_;
   }
 
-  const char* what() const noexcept override
+  const char * what() const noexcept override
   {
     return this->error_message_.c_str();
   }
