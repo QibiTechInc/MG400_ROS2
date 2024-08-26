@@ -82,25 +82,6 @@ rclcpp_action::GoalResponse MovL::handle_goal(
     return rclcpp_action::GoalResponse::REJECT;
   }
 
-  std::vector<double> tool_vec;
-  tool_vec.push_back(this->tf_goal_.pose.position.x);  // px
-  tool_vec.push_back(this->tf_goal_.pose.position.y);  // py
-  tool_vec.push_back(this->tf_goal_.pose.position.z);  // pz
-  tool_vec.push_back(tf2::getYaw(this->tf_goal_.pose.orientation));  // r in radian
-
-  // check if the requested goal is inside the mg400 range
-  // by solving inverse kinematics and see the angles of each joints.
-  std::vector<double> angles;
-  try {
-    angles = this->mg400_ik_util_.InverseKinematics(tool_vec);
-    RCLCPP_INFO(
-      this->node_logging_if_->get_logger(), "Joint angles = {%f, %f, %f, %f}", angles[0] * 180.0 / M_PI,
-      angles[1] * 180.0 / M_PI, angles[2] * 180.0 / M_PI, angles[3] * 180.0 / M_PI);
-  } catch (const std::exception & e) {
-    RCLCPP_ERROR(this->node_logging_if_->get_logger(), e.what());
-    return rclcpp_action::GoalResponse::REJECT;
-  }
-
   return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
 }
 
@@ -131,6 +112,29 @@ void MovL::execute(const std::shared_ptr<GoalHandle> goal_handle)
   auto result = std::make_shared<ActionT::Result>();
   result->result = false;
 
+  // check if the requested goal is inside the mg400 range
+  // by solving inverse kinematics and see the angles of each joints.
+  std::vector<double> tool_vec;
+  tool_vec.push_back(this->tf_goal_.pose.position.x);  // px
+  tool_vec.push_back(this->tf_goal_.pose.position.y);  // py
+  tool_vec.push_back(this->tf_goal_.pose.position.z);  // pz
+  tool_vec.push_back(tf2::getYaw(this->tf_goal_.pose.orientation));  // r in radian
+  std::vector<double> angles;
+  try {
+    angles = this->mg400_ik_util_.InverseKinematics(tool_vec);
+    RCLCPP_INFO(
+      this->node_logging_if_->get_logger(), "Joint angles = {%f, %f, %f, %f}", angles[0] * 180.0 / M_PI,
+      angles[1] * 180.0 / M_PI, angles[2] * 180.0 / M_PI, angles[3] * 180.0 / M_PI);
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(this->node_logging_if_->get_logger(), e.what());
+    // ErrorID 18: Inverse kinematics error with result out of working area
+    result->result = false;
+    result->error_id.controller.ids.emplace_back(18);
+    goal_handle->abort(result);
+    return;
+  }
+
+  // send MovL command
   try {
     this->commander_->movL(
       this->tf_goal_.pose.position.x, this->tf_goal_.pose.position.y,
