@@ -25,6 +25,7 @@
 #include <mg400_msgs/msg/di_index.hpp>
 #include <mg400_msgs/msg/do_index.hpp>
 #include <mg400_msgs/msg/do_status.hpp>
+#include <mg400_msgs/msg/error_id.hpp>
 #include <mg400_msgs/msg/tool_do_index.hpp>
 #include <mg400_msgs/msg/tool.hpp>
 #include <mg400_msgs/msg/user.hpp>
@@ -51,6 +52,7 @@ private:
   using DIIndex = mg400_msgs::msg::DIIndex;
   using DOIndex = mg400_msgs::msg::DOIndex;
   using DOStatus = mg400_msgs::msg::DOStatus;
+  using ErrorID = mg400_msgs::msg::ErrorID;
   using Tool = mg400_msgs::msg::Tool;
   using ToolDOIndex = mg400_msgs::msg::ToolDOIndex;
   using User = mg400_msgs::msg::User;
@@ -147,6 +149,7 @@ public:
   int setHoldRegs(const int, const int, const int, const std::string &, const std::string &);
 */
   std::array<std::vector<int>, 6> getErrorId() const;
+  void convertToErrorIdMsg(const std::array<std::vector<int>, 6> &, ErrorID &) const;
 
   int DI(const DIIndex &) const;
   int DI(const DIIndex::_index_type &) const;

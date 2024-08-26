@@ -3,6 +3,7 @@ geometry_msgs/PoseStamped pose
 ---
 #result definition
 bool result
+mg400_msgs/ErrorID error_id
 ---
 #feedback definition
 geometry_msgs/PoseStamped current_pose

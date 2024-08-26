@@ -357,6 +357,16 @@ std::array<std::vector<int>, 6> DashboardCommander::getErrorId() const
   return ResponseParser::takeErrorMessage(response.ret_val);
 }
 
+void DashboardCommander::convertToErrorIdMsg(
+  const std::array<std::vector<int>, 6> & error_id,
+  ErrorID & msg) const
+{
+  msg.controller.ids = error_id.at(0);
+  for (size_t i = 1; i < error_id.size(); ++i) {
+    msg.servo.at(i - 1).ids = error_id[i];
+  }
+}
+
 int DashboardCommander::DI(const DIIndex & do_index) const
 {
   return this->DI(do_index.index);
