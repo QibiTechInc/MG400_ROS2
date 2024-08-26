@@ -39,9 +39,8 @@ private:
   std::string error_message_;
 
 public:
-  explicit DashboardCommandException(
-    const std::string & msg, const DashboardResponse & response)
-  : std::runtime_error(msg),
+  explicit DashboardCommandException(const DashboardResponse & response)
+  : std::runtime_error("DashboardCommandException"),
     response_(response)
   {
     this->error_message_ = response_.func_name + " failed: " +
