@@ -363,7 +363,7 @@ void DashboardCommander::convertToErrorIdMsg(
 {
   msg.controller.ids = error_id.at(0);
   for (size_t i = 1; i < error_id.size(); ++i) {
-    msg.servo.at(i-1).ids = error_id[i];
+    msg.servo.at(i - 1).ids = error_id[i];
   }
 }
 

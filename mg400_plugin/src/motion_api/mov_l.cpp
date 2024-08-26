@@ -190,8 +190,10 @@ void MovL::execute(const std::shared_ptr<GoalHandle> goal_handle)
         this->node_logging_if_->get_logger(),
         "execution timeout: Robot mode did not become RUNNING.");
       try {
-        const std::array<std::vector<int>, 6> error_id = this->mg400_interface_->dashboard_commander->getErrorId();
-        this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(error_id, result->error_id);
+        const std::array<std::vector<int>, 6> error_id =
+          this->mg400_interface_->dashboard_commander->getErrorId();
+        this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(
+          error_id, result->error_id);
       } catch (const std::exception & e) {
         RCLCPP_WARN(this->node_logging_if_->get_logger(), "Failed to get Error ID: %s", e.what());
       }
@@ -203,8 +205,10 @@ void MovL::execute(const std::shared_ptr<GoalHandle> goal_handle)
       RCLCPP_ERROR(
         this->node_logging_if_->get_logger(), "Robot Mode Error while checking becoming RUNNING");
       try {
-        const std::array<std::vector<int>, 6> error_id = this->mg400_interface_->dashboard_commander->getErrorId();
-        this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(error_id, result->error_id);
+        const std::array<std::vector<int>, 6> error_id =
+          this->mg400_interface_->dashboard_commander->getErrorId();
+        this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(
+          error_id, result->error_id);
       } catch (const std::exception & e) {
         RCLCPP_WARN(this->node_logging_if_->get_logger(), "Failed to get Error ID: %s", e.what());
       }
@@ -221,8 +225,10 @@ void MovL::execute(const std::shared_ptr<GoalHandle> goal_handle)
     if (!this->mg400_interface_->ok()) {
       RCLCPP_ERROR(this->node_logging_if_->get_logger(), "MG400 Connection Error");
       try {
-        const std::array<std::vector<int>, 6> error_id = this->mg400_interface_->dashboard_commander->getErrorId();
-        this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(error_id, result->error_id);
+        const std::array<std::vector<int>, 6> error_id =
+          this->mg400_interface_->dashboard_commander->getErrorId();
+        this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(
+          error_id, result->error_id);
       } catch (const std::exception & e) {
         RCLCPP_WARN(this->node_logging_if_->get_logger(), "Failed to get Error ID: %s", e.what());
       }
@@ -234,8 +240,10 @@ void MovL::execute(const std::shared_ptr<GoalHandle> goal_handle)
       RCLCPP_ERROR(
         this->node_logging_if_->get_logger(), "Robot Mode Error while checking reaching goal");
       try {
-        const std::array<std::vector<int>, 6> error_id = this->mg400_interface_->dashboard_commander->getErrorId();
-        this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(error_id, result->error_id);
+        const std::array<std::vector<int>, 6> error_id =
+          this->mg400_interface_->dashboard_commander->getErrorId();
+        this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(
+          error_id, result->error_id);
       } catch (const std::exception & e) {
         RCLCPP_WARN(this->node_logging_if_->get_logger(), "Failed to get Error ID: %s", e.what());
       }
@@ -246,8 +254,10 @@ void MovL::execute(const std::shared_ptr<GoalHandle> goal_handle)
     if (this->node_clock_if_->get_clock()->now() - start > timeout) {
       RCLCPP_ERROR(this->node_logging_if_->get_logger(), "execution timeout");
       try {
-        const std::array<std::vector<int>, 6> error_id = this->mg400_interface_->dashboard_commander->getErrorId();
-        this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(error_id, result->error_id);
+        const std::array<std::vector<int>, 6> error_id =
+          this->mg400_interface_->dashboard_commander->getErrorId();
+        this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(
+          error_id, result->error_id);
       } catch (const std::exception & e) {
         RCLCPP_WARN(this->node_logging_if_->get_logger(), "Failed to get Error ID: %s", e.what());
       }
