@@ -28,7 +28,7 @@ bool ResponseParser::parseResponse(
     switch (search_mode_counter) {
       case 0:
         if (s == ',') {
-          response.error_code = std::stoi(buf);
+          response.error_id = std::stoi(buf);
           buf.clear();
           // go to next search mode
           search_mode_counter++;

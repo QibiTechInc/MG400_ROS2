@@ -21,7 +21,7 @@ TEST(ResponseParser, ParseResponse) {
   mg400_interface::DashboardResponse response;
   mg400_interface::ResponseParser::parseResponse(packet, response);
 
-  ASSERT_EQ(response.error_code, 0);
+  ASSERT_EQ(response.error_id, 0);
   ASSERT_EQ(response.ret_val, "{5}");
   ASSERT_EQ(response.func_name, "RobotMode()");
 }

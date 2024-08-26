@@ -27,7 +27,7 @@ namespace mg400_interface
 {
 typedef struct
 {
-  int error_code;
+  int error_id;
   std::string ret_val;
   std::string func_name;
 } DashboardResponse;
