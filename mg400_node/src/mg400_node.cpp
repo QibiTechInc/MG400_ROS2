@@ -254,7 +254,7 @@ void MG400Node::onErrorTimer()
   } catch (const std::out_of_range & ex) {
     RCLCPP_ERROR(this->get_logger(), "Out of range %s", ex.what());
   } catch (...) {
-    RCLCPP_ERROR(this->get_logger(), "Unknown exception");
+    RCLCPP_ERROR(this->get_logger(), "Cannot parse response from MG400");
   }
 }
 

@@ -51,6 +51,10 @@ void SpeedFactor::onServiceCall(
     try {
       this->commander_->speedFactor(static_cast<int>(req->ratio));
       res->result = true;
+    } catch (const mg400_interface::DashboardCommandException & ex) {
+      RCLCPP_ERROR(this->node_logging_if_->get_logger(), ex.what());
+      res->result = false;
+      res->error_id = ex.getDashboardResponse().error_id;
     } catch (const std::runtime_error & ex) {
       RCLCPP_ERROR(this->node_logging_if_->get_logger(), ex.what());
     } catch (...) {
