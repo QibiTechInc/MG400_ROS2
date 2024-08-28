@@ -59,27 +59,6 @@ CallbackReturn MG400Node::on_configure(const State &)
     return CallbackReturn::FAILURE;
   }
 
-  if (this->get_parameter("auto_connect").as_bool()) {
-    RCLCPP_INFO(this->get_logger(), "Try connecting to MG400 at %s ...", this->ip_address_.c_str());
-    this->connect_timer_ = this->create_wall_timer(0s, [this]() {this->activate();});
-  }
-
-  return CallbackReturn::SUCCESS;
-}
-
-CallbackReturn MG400Node::on_activate(const State &)
-{
-  this->connect_timer_.reset();
-
-  if (!this->interface_->activate()) {
-    RCLCPP_WARN(this->get_logger(), "Failed to connect to MG400 at %s", this->ip_address_.c_str());
-    if (this->get_parameter("auto_connect").as_bool()) {
-      RCLCPP_INFO(this->get_logger(), "Try reconnecting in 5 seconds ...");
-      this->connect_timer_ = this->create_wall_timer(5s, [this]() {this->activate();});
-    }
-    return CallbackReturn::FAILURE;
-  }
-
   this->dashboard_api_loader_ =
     std::make_shared<mg400_plugin_base::DashboardApiLoader>();
   this->dashboard_api_loader_->loadPlugins(
@@ -116,6 +95,28 @@ CallbackReturn MG400Node::on_activate(const State &)
     "robot_mode", rclcpp::SensorDataQoS());
   this->error_id_pub_ = this->create_publisher<mg400_msgs::msg::ErrorID>(
     "error_id", rclcpp::QoS(rclcpp::KeepLast(1)).reliable().durability_volatile());
+
+  if (this->get_parameter("auto_connect").as_bool()) {
+    RCLCPP_INFO(this->get_logger(), "Try connecting to MG400 at %s ...", this->ip_address_.c_str());
+    this->connect_timer_ = this->create_wall_timer(0s, [this]() {this->activate();});
+  }
+
+  return CallbackReturn::SUCCESS;
+}
+
+CallbackReturn MG400Node::on_activate(const State &)
+{
+  this->connect_timer_.reset();
+
+  if (!this->interface_->activate()) {
+    RCLCPP_WARN(this->get_logger(), "Failed to connect to MG400 at %s", this->ip_address_.c_str());
+    if (this->get_parameter("auto_connect").as_bool()) {
+      RCLCPP_INFO(this->get_logger(), "Try reconnecting in 5 seconds ...");
+      this->connect_timer_ = this->create_wall_timer(5s, [this]() {this->activate();});
+    }
+    return CallbackReturn::FAILURE;
+  }
+
   this->runTimer();
 
   RCLCPP_INFO(this->get_logger(), "Connected to MG400 at %s", this->ip_address_.c_str());
@@ -129,17 +130,7 @@ CallbackReturn MG400Node::on_deactivate(const State &)
   this->mg400_connected_pub_->publish(std_msgs::msg::Bool().set__data(false));
 
   this->cancelTimer();
-  this->dashboard_api_loader_.reset();
-  this->motion_api_loader_.reset();
-  this->joint_state_pub_.reset();
-  this->robot_mode_pub_.reset();
-  this->error_id_pub_.reset();
   this->interface_->deactivate();
-
-  if (this->get_parameter("auto_connect").as_bool()) {
-    RCLCPP_INFO(this->get_logger(), "Try reconnecting in 5 seconds ...");
-    this->connect_timer_ = this->create_wall_timer(5s, [this]() {this->activate();});
-  }
 
   return CallbackReturn::SUCCESS;
 }
@@ -147,6 +138,11 @@ CallbackReturn MG400Node::on_deactivate(const State &)
 CallbackReturn MG400Node::on_cleanup(const State &)
 {
   this->mg400_connected_pub_.reset();
+  this->dashboard_api_loader_.reset();
+  this->motion_api_loader_.reset();
+  this->joint_state_pub_.reset();
+  this->robot_mode_pub_.reset();
+  this->error_id_pub_.reset();
   this->interface_.reset();
   this->connect_timer_.reset();
   return CallbackReturn::SUCCESS;

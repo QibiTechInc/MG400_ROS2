@@ -47,6 +47,7 @@ void GetAngle::onServiceCall(
   const ServiceT::Request::SharedPtr,
   ServiceT::Response::SharedPtr res)
 {
+  res->error_id = -1;
   if (this->mg400_interface_->ok()) {
     try {
       auto joints = this->commander_->getAngle();
@@ -56,6 +57,7 @@ void GetAngle::onServiceCall(
       res->joint4 = joints[3];
       res->joint5 = joints[4];
       res->joint6 = joints[5];
+      res->error_id = 0;
     } catch (const mg400_interface::DashboardCommandException & ex) {
       RCLCPP_ERROR(this->node_logging_if_->get_logger(), ex.what());
       res->error_id = ex.getDashboardResponse().error_id;

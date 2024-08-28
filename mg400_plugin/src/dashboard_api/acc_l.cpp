@@ -49,10 +49,12 @@ void AccL::onServiceCall(
   ServiceT::Response::SharedPtr res)
 {
   res->result = false;
+  res->error_id = -1;
   if (this->mg400_interface_->ok()) {
     try {
       this->commander_->accL(static_cast<int>(req->r));
       res->result = true;
+      res->error_id = 0;
     } catch (const mg400_interface::DashboardCommandException & ex) {
       RCLCPP_ERROR(this->node_logging_if_->get_logger(), ex.what());
       res->result = false;
