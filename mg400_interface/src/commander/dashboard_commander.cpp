@@ -88,8 +88,8 @@ uint64_t DashboardCommander::robotMode() const
   static DashboardResponse response;
   ResponseParser::parseResponse(
     this->sendAndWaitResponse("RobotMode()"), response);
-  if (!response.result) {
-    throw std::runtime_error("Dobot not return 0");
+  if (response.error_id != 0) {
+    throw std::runtime_error("Dobot not return 0: " + std::to_string(response.error_id));
   }
   return static_cast<uint64_t>(ResponseParser::takeInt(response.ret_val));
 }
@@ -223,8 +223,8 @@ std::vector<double> DashboardCommander::getAngle()
   static DashboardResponse response;
   ResponseParser::parseResponse(
     this->sendAndWaitResponse("GetAngle()"), response);
-  if (!response.result) {
-    throw std::runtime_error("Dobot not return 0");
+  if (response.error_id != 0) {
+    throw std::runtime_error("Dobot not return 0: " + std::to_string(response.error_id));
   }
   return ResponseParser::takeAngleArray(response.ret_val);
 }
@@ -234,8 +234,8 @@ std::vector<double> DashboardCommander::getPose()
   static DashboardResponse response;
   ResponseParser::parseResponse(
     this->sendAndWaitResponse("GetPose()"), response);
-  if (!response.result) {
-    throw std::runtime_error("Dobot not return 0");
+  if (response.error_id != 0) {
+    throw std::runtime_error("Dobot not return 0: " + std::to_string(response.error_id));
   }
   return ResponseParser::takePoseArray(response.ret_val);
 }
@@ -351,10 +351,20 @@ std::array<std::vector<int>, 6> DashboardCommander::getErrorId() const
   static DashboardResponse response;
   ResponseParser::parseResponse(
     this->sendAndWaitResponse("GetErrorID()"), response);
-  if (!response.result) {
-    throw std::runtime_error("Dobot Not return 0");
+  if (response.error_id != 0) {
+    throw std::runtime_error("Dobot Not return 0: " + std::to_string(response.error_id));
   }
   return ResponseParser::takeErrorMessage(response.ret_val);
+}
+
+void DashboardCommander::convertToErrorIdMsg(
+  const std::array<std::vector<int>, 6> & error_id,
+  ErrorID & msg) const
+{
+  msg.controller.ids = error_id.at(0);
+  for (size_t i = 1; i < error_id.size(); ++i) {
+    msg.servo.at(i - 1).ids = error_id[i];
+  }
 }
 
 int DashboardCommander::DI(const DIIndex & do_index) const
@@ -369,8 +379,8 @@ int DashboardCommander::DI(const DIIndex::_index_type & di_index) const
   const int cx = snprintf(buf, sizeof(buf), "DI(%u)", di_index);
   ResponseParser::parseResponse(
     this->sendAndWaitResponse(std::string(buf, cx)), response);
-  if (!response.result) {
-    throw std::runtime_error("Dobot Not return 0");
+  if (response.error_id != 0) {
+    throw std::runtime_error("Dobot Not return 0: " + std::to_string(response.error_id));
   }
   return ResponseParser::takeInt(response.ret_val);
 }
@@ -402,8 +412,8 @@ void DashboardCommander::evaluateResponse(const std::string & packet) const
 {
   static DashboardResponse response;
   ResponseParser::parseResponse(packet, response);
-  if (!response.result) {
-    throw std::runtime_error("Dobot Not return 0");
+  if (response.error_id != 0) {
+    throw DashboardCommandException(response);
   }
 }
 }  // namespace mg400_interface

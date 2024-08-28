@@ -217,8 +217,8 @@ void MG400Node::onErrorTimer()
     return;
   }
 
+  auto msg = std::make_unique<mg400_msgs::msg::ErrorID>();
   try {
-    auto msg = std::make_unique<mg400_msgs::msg::ErrorID>();
     std::stringstream ss;
     const auto error_ids =
       this->interface_->dashboard_commander->getErrorId();
@@ -247,10 +247,16 @@ void MG400Node::onErrorTimer()
     this->error_id_pub_->publish(std::move(msg));
   } catch (const std::runtime_error & ex) {
     RCLCPP_ERROR(this->get_logger(), ex.what());
+    msg->controller.ids.emplace_back(-1);
+    this->error_id_pub_->publish(std::move(msg));
   } catch (const std::out_of_range & ex) {
     RCLCPP_ERROR(this->get_logger(), "Out of range %s", ex.what());
+    msg->controller.ids.emplace_back(-1);
+    this->error_id_pub_->publish(std::move(msg));
   } catch (...) {
-    RCLCPP_ERROR(this->get_logger(), "Unknown exception");
+    RCLCPP_ERROR(this->get_logger(), "Cannot parse response from MG400");
+    msg->controller.ids.emplace_back(-1);
+    this->error_id_pub_->publish(std::move(msg));
   }
 }
 

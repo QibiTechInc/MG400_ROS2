@@ -27,10 +27,36 @@ namespace mg400_interface
 {
 typedef struct
 {
-  bool result;
+  int error_id;
   std::string ret_val;
   std::string func_name;
 } DashboardResponse;
+
+class DashboardCommandException : public std::runtime_error
+{
+private:
+  DashboardResponse response_;
+  std::string error_message_;
+
+public:
+  explicit DashboardCommandException(const DashboardResponse & response)
+  : std::runtime_error("DashboardCommandException"),
+    response_(response)
+  {
+    this->error_message_ = response_.func_name + " failed: " +
+      std::to_string(response_.error_id) + " " + response_.ret_val;
+  }
+
+  const DashboardResponse & getDashboardResponse() const
+  {
+    return response_;
+  }
+
+  const char * what() const noexcept override
+  {
+    return this->error_message_.c_str();
+  }
+};
 
 class ResponseParser
 {

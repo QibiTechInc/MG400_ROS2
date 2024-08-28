@@ -56,6 +56,9 @@ void GetPose::onServiceCall(
       res->pose4 = poses[3];
       res->pose5 = poses[4];
       res->pose6 = poses[5];
+    } catch (const mg400_interface::DashboardCommandException & ex) {
+      RCLCPP_ERROR(this->node_logging_if_->get_logger(), ex.what());
+      res->error_id = ex.getDashboardResponse().error_id;
     } catch (const std::runtime_error & ex) {
       RCLCPP_ERROR(this->node_logging_if_->get_logger(), ex.what());
     } catch (...) {
