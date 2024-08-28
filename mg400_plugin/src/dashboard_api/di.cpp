@@ -47,9 +47,12 @@ void DI::onServiceCall(
   const ServiceT::Request::SharedPtr req,
   ServiceT::Response::SharedPtr res)
 {
+  res->result = false;
+  res->error_id = -1;
   if (this->mg400_interface_->ok()) {
     try {
       res->result = this->commander_->DI(req->index.index);
+      res->error_id = 0;
     } catch (const mg400_interface::DashboardCommandException & ex) {
       RCLCPP_ERROR(this->node_logging_if_->get_logger(), ex.what());
       res->result = false;

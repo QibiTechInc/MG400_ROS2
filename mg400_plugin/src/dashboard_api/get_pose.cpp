@@ -47,6 +47,7 @@ void GetPose::onServiceCall(
   const ServiceT::Request::SharedPtr,
   ServiceT::Response::SharedPtr res)
 {
+  res->error_id = -1;
   if (this->mg400_interface_->ok()) {
     try {
       auto poses = this->commander_->getPose();
@@ -56,6 +57,7 @@ void GetPose::onServiceCall(
       res->pose4 = poses[3];
       res->pose5 = poses[4];
       res->pose6 = poses[5];
+      res->error_id = 0;
     } catch (const mg400_interface::DashboardCommandException & ex) {
       RCLCPP_ERROR(this->node_logging_if_->get_logger(), ex.what());
       res->error_id = ex.getDashboardResponse().error_id;

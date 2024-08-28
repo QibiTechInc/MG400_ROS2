@@ -47,9 +47,11 @@ void RobotMode::onServiceCall(
   const ServiceT::Request::SharedPtr,
   ServiceT::Response::SharedPtr res)
 {
+  res->error_id = -1;
   if (this->mg400_interface_->ok()) {
     try {
       res->robot_mode.robot_mode = this->commander_->robotMode();
+      res->error_id = 0;
     } catch (const mg400_interface::DashboardCommandException & ex) {
       RCLCPP_ERROR(this->node_logging_if_->get_logger(), ex.what());
       res->error_id = ex.getDashboardResponse().error_id;
