@@ -75,9 +75,6 @@ bool MG400Interface::activate()
 
 bool MG400Interface::deactivate()
 {
-  this->dashboard_commander.reset();
-  this->motion_commander.reset();
-
   // disconnect each interface in parallel because it takes time sometimes.
   std::thread discnt_dashboard_tcp_if_([this]() {this->dashboard_tcp_if_->disConnect();});
   std::thread discnt_realtime_tcp_if_([this]() {this->realtime_tcp_interface->disConnect();});
