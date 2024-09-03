@@ -271,6 +271,7 @@ void MG400Node::onErrorTimer()
 void MG400Node::onInterfaceCheckTimer()
 {
   if (!this->interface_->ok()) {
+    RCLCPP_ERROR(this->get_logger(), "Connection to MG400 was interrupted");
     this->connection_interrupted_ = true;
     this->deactivate();
   }
