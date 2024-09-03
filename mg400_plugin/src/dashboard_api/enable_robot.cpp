@@ -43,14 +43,15 @@ void EnableRobot::configure(
 }
 
 void EnableRobot::onServiceCall(
-  const ServiceT::Request::SharedPtr,
+  const ServiceT::Request::SharedPtr req,
   ServiceT::Response::SharedPtr res)
 {
   res->result = false;
   res->error_id = -1;
   if (this->mg400_interface_->ok()) {
     try {
-      this->commander_->enableRobot();
+      this->commander_->enableRobot(
+        req->num_of_params, req->load, req->center_x, req->center_y, req->center_z);
       res->result = true;
       res->error_id = 0;
     } catch (const mg400_interface::DashboardCommandException & ex) {

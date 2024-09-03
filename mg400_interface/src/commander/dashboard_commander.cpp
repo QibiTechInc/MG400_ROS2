@@ -28,10 +28,33 @@ DashboardCommander::DashboardCommander(
 }
 
 // DOBOT MG400 Official Command ---------------------------------------------
-void DashboardCommander::enableRobot() const
+void DashboardCommander::enableRobot(
+  const int8_t num_of_params,
+  const double load,
+  const double center_x,
+  const double center_y,
+  const double center_z) const
 {
-  this->evaluateResponse(
-    this->sendAndWaitResponse("EnableRobot()"));
+  if (num_of_params == 0) {
+    this->evaluateResponse(
+      this->sendAndWaitResponse("EnableRobot()"));
+  } else if (num_of_params == 1) {
+    static char buf[128];
+    const int cx = snprintf(buf, sizeof(buf), "EnableRobot(%.3lf)", load);
+    this->evaluateResponse(this->sendAndWaitResponse(std::string(buf, cx)));
+  } else if (num_of_params == 4) {
+    static char buf[128];
+    const int cx = snprintf(
+      buf, sizeof(buf), "EnableRobot(%.3lf,%.3lf,%.3lf,%.3lf)",
+      load, center_x, center_y, center_z);
+    this->evaluateResponse(this->sendAndWaitResponse(std::string(buf, cx)));
+  } else {
+    mg400_interface::DashboardResponse response;
+    response.error_id = -1;
+    response.ret_val = "Invalid number of parameters.";
+    response.func_name = "EnableRobot";
+    throw mg400_interface::DashboardCommandException(response);
+  }
 }
 
 void DashboardCommander::disableRobot() const
