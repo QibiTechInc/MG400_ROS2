@@ -68,7 +68,12 @@ public:
     const std::chrono::nanoseconds = 5s);
 
   // DOBOT MG400 Official Command ---------------------------------------------
-  void enableRobot() const;
+  void enableRobot(
+    const int8_t = 0,
+    const double = 0,
+    const double = 0,
+    const double = 0,
+    const double = 0) const;
 
   void disableRobot() const;
 
