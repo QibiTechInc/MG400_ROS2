@@ -59,20 +59,20 @@ private:
   mg400_interface::MG400Interface::SharedPtr interface_;
   mg400_plugin_base::DashboardApiLoader::SharedPtr dashboard_api_loader_;
   mg400_plugin_base::MotionApiLoader::SharedPtr motion_api_loader_;
-  bool mg400_connected_;
 
   rclcpp::TimerBase::SharedPtr init_timer_;
   rclcpp::TimerBase::SharedPtr joint_state_timer_;
   rclcpp::TimerBase::SharedPtr robot_mode_timer_;
   rclcpp::TimerBase::SharedPtr error_timer_;
   rclcpp::TimerBase::SharedPtr interface_check_timer_;
-  rclcpp::TimerBase::SharedPtr activate_timer_;
   rclcpp::TimerBase::SharedPtr connect_timer_;
 
   rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_state_pub_;
   rclcpp::Publisher<mg400_msgs::msg::RobotMode>::SharedPtr robot_mode_pub_;
   rclcpp::Publisher<mg400_msgs::msg::ErrorID>::SharedPtr error_id_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr mg400_connected_pub_;
+
+  bool connection_interrupted_;
 
 public:
   MG400Node() = delete;
@@ -93,7 +93,6 @@ private:
   CallbackReturn on_shutdown(const rclcpp_lifecycle::State &) override;
   CallbackReturn on_error(const rclcpp_lifecycle::State &) override;
 
-  void connect();
   void runTimer();
   void cancelTimer();
 };

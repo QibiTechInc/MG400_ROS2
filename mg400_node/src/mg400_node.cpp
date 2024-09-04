@@ -46,11 +46,10 @@ MG400Node::~MG400Node()
 
 CallbackReturn MG400Node::on_configure(const State &)
 {
-  this->mg400_connected_ = false;
   this->mg400_connected_pub_ =
     this->create_publisher<std_msgs::msg::Bool>(
     "mg400_connected", rclcpp::QoS(rclcpp::KeepLast(1)).reliable().transient_local());
-  this->mg400_connected_pub_->publish(std_msgs::msg::Bool().set__data(this->mg400_connected_));
+  this->mg400_connected_pub_->publish(std_msgs::msg::Bool().set__data(false));
 
   this->ip_address_ = this->get_parameter("ip_address").as_string();
   this->interface_ =
@@ -97,9 +96,11 @@ CallbackReturn MG400Node::on_configure(const State &)
   this->error_id_pub_ = this->create_publisher<mg400_msgs::msg::ErrorID>(
     "error_id", rclcpp::QoS(rclcpp::KeepLast(1)).reliable().durability_volatile());
 
+  this->connection_interrupted_ = false;
+
   if (this->get_parameter("auto_connect").as_bool()) {
     RCLCPP_INFO(this->get_logger(), "Try connecting to MG400 at %s ...", this->ip_address_.c_str());
-    this->activate_timer_ = this->create_wall_timer(0s, [this]() {this->activate();});
+    this->connect_timer_ = this->create_wall_timer(0s, [this]() {this->activate();});
   }
 
   return CallbackReturn::SUCCESS;
@@ -107,22 +108,36 @@ CallbackReturn MG400Node::on_configure(const State &)
 
 CallbackReturn MG400Node::on_activate(const State &)
 {
-  this->activate_timer_.reset();
-  this->connect_timer_ = this->create_wall_timer(0s, [this]() {this->connect();});
+  this->connect_timer_.reset();
+
+  if (!this->interface_->activate()) {
+    RCLCPP_WARN(this->get_logger(), "Failed to connect to MG400 at %s", this->ip_address_.c_str());
+    if (this->get_parameter("auto_connect").as_bool() || this->connection_interrupted_) {
+      RCLCPP_INFO(this->get_logger(), "Try reconnecting in 5 seconds ...");
+      this->connect_timer_ = this->create_wall_timer(5s, [this]() {this->activate();});
+    }
+    return CallbackReturn::FAILURE;
+  }
+
+  this->runTimer();
+  this->connection_interrupted_ = false;
+
+  RCLCPP_INFO(this->get_logger(), "Connected to MG400 at %s", this->ip_address_.c_str());
+  this->mg400_connected_pub_->publish(std_msgs::msg::Bool().set__data(true));
   return CallbackReturn::SUCCESS;
 }
 
 CallbackReturn MG400Node::on_deactivate(const State &)
 {
-  this->connect_timer_.reset();
+  RCLCPP_WARN(this->get_logger(), "Disconnected from MG400 at %s", this->ip_address_.c_str());
+  this->mg400_connected_pub_->publish(std_msgs::msg::Bool().set__data(false));
 
   this->cancelTimer();
   this->interface_->deactivate();
 
-  if (this->mg400_connected_) {
-    this->mg400_connected_ = false;
-    RCLCPP_WARN(this->get_logger(), "Disconnected from MG400 at %s", this->ip_address_.c_str());
-    this->mg400_connected_pub_->publish(std_msgs::msg::Bool().set__data(this->mg400_connected_));
+  if (this->connection_interrupted_) {
+    RCLCPP_INFO(this->get_logger(), "Try reconnecting in 5 seconds ...");
+    this->connect_timer_ = this->create_wall_timer(5s, [this]() {this->activate();});
   }
 
   return CallbackReturn::SUCCESS;
@@ -167,20 +182,6 @@ CallbackReturn MG400Node::on_error(const State &)
   this->interface_.reset();
   this->connect_timer_.reset();
   return CallbackReturn::SUCCESS;
-}
-
-void MG400Node::connect()
-{
-  this->connect_timer_.reset();
-
-  if (!this->interface_->activate()) {
-    RCLCPP_WARN(this->get_logger(), "Failed to connect to MG400 at %s", this->ip_address_.c_str());
-    RCLCPP_INFO(this->get_logger(), "Try reconnecting in 5 seconds ...");
-    this->connect_timer_ = this->create_wall_timer(5s, [this]() {this->connect();});
-    return;
-  }
-
-  this->runTimer();
 }
 
 void MG400Node::onJointStateTimer()
@@ -269,24 +270,10 @@ void MG400Node::onErrorTimer()
 
 void MG400Node::onInterfaceCheckTimer()
 {
-  // when connection is established
-  if (!this->mg400_connected_ && this->interface_->ok()) {
-    this->mg400_connected_ = true;
-    RCLCPP_INFO(this->get_logger(), "Connected to MG400 at %s", this->ip_address_.c_str());
-    this->mg400_connected_pub_->publish(std_msgs::msg::Bool().set__data(this->mg400_connected_));
-  }
-
-  // when connection is lost
-  if (this->mg400_connected_ && !this->interface_->ok()) {
-    this->mg400_connected_ = false;
-    RCLCPP_WARN(this->get_logger(), "Disconnected from MG400 at %s", this->ip_address_.c_str());
-    this->mg400_connected_pub_->publish(std_msgs::msg::Bool().set__data(this->mg400_connected_));
-
-    this->interface_->deactivate();
-    this->cancelTimer();
-
-    RCLCPP_INFO(this->get_logger(), "Try reconnecting in 5 seconds ...");
-    this->connect_timer_ = this->create_wall_timer(5s, [this]() {this->connect();});
+  if (!this->interface_->ok()) {
+    RCLCPP_ERROR(this->get_logger(), "Connection to MG400 was interrupted");
+    this->connection_interrupted_ = true;
+    this->deactivate();
   }
 }
 
