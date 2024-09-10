@@ -136,7 +136,7 @@ bool TcpSocketHandler::recv(void * buf, uint32_t len, const std::chrono::nanosec
     if (err < 0) {
       this->disConnect();
       throw TcpSocketException(this->toString() + std::string(" select() : ") + strerror(errno));
-    } else if (err == 0) {
+    } else if (err == 0 || FD_ISSET(this->fd_, &read_fds) == 0) {
       return false;
     }
     err = static_cast<int>(::read(fd_, tmp, len));
