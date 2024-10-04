@@ -26,6 +26,7 @@ void MotionCommander::movJ(
   const si_m x, const si_m y, const si_m z,
   const si_rad rx, const si_rad ry, const si_rad rz)
 {
+  std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   char buf[100];
   snprintf(
     buf, sizeof(buf),
@@ -39,6 +40,7 @@ void MotionCommander::movL(
   const si_m x, const si_m y, const si_m z,
   const si_rad rx, const si_rad ry, const si_rad rz)
 {
+  std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   char buf[100];
   snprintf(
     buf, sizeof(buf),
@@ -52,6 +54,7 @@ void MotionCommander::jointMovJ(
   const si_rad j1, const si_rad j2, const si_rad j3,
   const si_rad j4, const si_rad j5, const si_rad j6)
 {
+  std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   char buf[100];
   snprintf(
     buf, sizeof(buf),
@@ -81,6 +84,7 @@ void MotionCommander::movLIO(
   const DOIndex::_index_type & index,
   const DOStatus::_status_type & status)
 {
+  std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   char buf[100];
   snprintf(
     buf, sizeof(buf),
@@ -109,6 +113,7 @@ void MotionCommander::movJIO(
   const DOIndex::_index_type & index,
   const DOStatus::_status_type & status)
 {
+  std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   char buf[100];
   snprintf(
     buf, sizeof(buf),
@@ -126,6 +131,7 @@ void MotionCommander::arc(
   const si_m x2, const si_m y2, const si_m z2,
   const si_rad rx2, const si_rad ry2, const si_rad rz2)
 {
+  std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   char buf[100];
   snprintf(
     buf, sizeof(buf),
@@ -145,6 +151,7 @@ void MotionCommander::moveJog(const MoveJog::SharedPtr & jog_mode)
 
 void MotionCommander::moveJog(const MoveJog::_jog_mode_type & jog_mode)
 {
+  std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   char buf[100];
   snprintf(buf, sizeof(buf), "MoveJog(%s)", jog_mode.c_str());
   this->tcp_if_->sendCommand(buf);
@@ -153,6 +160,7 @@ void MotionCommander::moveJog(const MoveJog::_jog_mode_type & jog_mode)
 
 void MotionCommander::sync()
 {
+  std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   char buf[100];
   snprintf(buf, sizeof(buf), "Sync()");
   this->tcp_if_->sendCommand(buf);
@@ -173,6 +181,7 @@ void MotionCommander::relMovJUser(
   const si_rad rx, const si_rad ry, const si_rad rz,
   const User::_user_type & user)
 {
+  std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   char buf[100];
   snprintf(
     buf, sizeof(buf),
@@ -197,6 +206,7 @@ void MotionCommander::relMovLUser(
   const si_rad rx, const si_rad ry, const si_rad rz,
   const User::_user_type & user)
 {
+  std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   char buf[100];
   snprintf(
     buf, sizeof(buf),
@@ -210,6 +220,7 @@ void MotionCommander::relJointMovJ(
   const si_rad j1, const si_rad j2, const si_rad j3,
   const si_rad j4, const si_rad j5, const si_rad j6)
 {
+  std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   char buf[100];
   snprintf(
     buf, sizeof(buf),

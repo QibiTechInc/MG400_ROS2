@@ -45,7 +45,6 @@ public:
 private:
   const uint16_t PORT_ = 30003;
 
-  std::mutex mutex_;
   std::atomic<bool> is_running_;
   std::unique_ptr<std::thread> thread_;
   std::shared_ptr<TcpSocketHandler> tcp_socket_;
