@@ -58,6 +58,7 @@ private:
   using User = mg400_msgs::msg::User;
 
   DashboardTcpInterfaceBase * tcp_if_;
+  mutable std::mutex mutex_tcp_if_;
   rclcpp::Clock::SharedPtr clock_;
   const std::chrono::nanoseconds TIMEOUT;
 

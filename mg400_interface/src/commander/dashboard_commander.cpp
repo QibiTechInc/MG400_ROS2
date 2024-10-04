@@ -272,6 +272,7 @@ int DashboardCommander::modbusCreate(
   const std::string & ip, const int port,
   const int slave_id, const int isRTU)
 {
+  std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   char buf[100];
   snprintf(
     buf, sizeof(buf), "ModbusCreate(%s,%d,%d,%d)",
@@ -292,6 +293,7 @@ bool DashboardCommander::modbusClose(const std::string & index)
 std::vector<int> DashboardCommander::getInBits(
   const int index, const int addr, const int count)
 {
+  std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   char buf[100];
   snprintf(
     buf, sizeof(buf), "GetInBits(%d,%d,%d)",
@@ -305,6 +307,7 @@ std::vector<int> DashboardCommander::getInRegs(
   const int index, const int addr,
   const int count, const std::string & valType)
 {
+  std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   char buf[100];
   snprintf(
     buf, sizeof(buf), "GetInRegs(%d,%d,%d,{%s})",
@@ -318,6 +321,7 @@ std::vector<int> DashboardCommander::getInRegs(
 std::vector<int> DashboardCommander::getCoils(
   const int index, const int addr, const int count)
 {
+  std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   char buf[100];
   snprintf(
     buf, sizeof(buf), "GetCoils(%d,%d,%d)",
@@ -332,6 +336,7 @@ int DashboardCommander::setCoils(
   const int index, const int addr,
   const int count, const std::string & valTab)
 {
+  std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   char buf[100];
   snprintf(
     buf, sizeof(buf), "SetCoils(%d,%d,%d,{%s})",
@@ -346,6 +351,7 @@ std::vector<int> DashboardCommander::getHoldRegs(
   const int index, const int addr,
   const int count, const std::string & valType)
 {
+  std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   char buf[100];
   snprintf(
     buf, sizeof(buf), "GetHoldRegs(%d,%d,%d,%s)",
@@ -359,6 +365,7 @@ int DashboardCommander::setHoldRegs(
   const int index, const int addr,
   const int count, const std::string & valTab, const std::string & valType)
 {
+  std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   char buf[100];
   snprintf(
     buf, sizeof(buf), "SetHoldRegs(%d,%d,%d,{%s},%s)",
@@ -417,6 +424,7 @@ const rclcpp::Logger DashboardCommander::getLogger()
 std::string DashboardCommander::sendAndWaitResponse(
   const std::string & command) const
 {
+  std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   this->tcp_if_->sendCommand(command);
 
   const auto start = this->clock_->now();

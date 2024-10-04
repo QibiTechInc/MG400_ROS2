@@ -44,6 +44,7 @@ private:
   using User = mg400_msgs::msg::User;
 
   MotionTcpInterfaceBase * tcp_if_;
+  mutable std::mutex mutex_tcp_if_;
 
 public:
   MotionCommander() = delete;
