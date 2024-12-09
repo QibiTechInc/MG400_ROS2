@@ -51,49 +51,94 @@ TEST_F(TestMotionCommander, MovJ) {
   EXPECT_CALL(
     mock, sendCommand(
       StrEq(
-        "MovJ(1.000,2.000,3.000,180.000,180.000,180.000)"))).Times(1);
-  commander->movJ(1.0e-3, 2.0e-3, 3.0e-3, M_PI, M_PI, M_PI);
+        "MovJ(1.000,2.000,3.000,180.000)"))).Times(1);
+  commander->movJ(1.0e-3, 2.0e-3, 3.0e-3, M_PI);
+}
+
+TEST_F(TestMotionCommander, MovJ2) {
+  EXPECT_CALL(
+    mock, sendCommand(
+      StrEq(
+        "MovJ(1.000,2.000,3.000,180.000,SpeedJ=100,AccJ=50,CP=10)"))).Times(1);
+  commander->movJ(1.0e-3, 2.0e-3, 3.0e-3, M_PI, 100, 50, 10);
 }
 
 TEST_F(TestMotionCommander, MovL) {
   EXPECT_CALL(
     mock, sendCommand(
       StrEq(
-        "MovL(1.000,2.000,3.000,180.000,180.000,180.000)"))).Times(1);
-  commander->movL(1.0e-3, 2.0e-3, 3.0e-3, M_PI, M_PI, M_PI);
+        "MovL(1.000,2.000,3.000,180.000)"))).Times(1);
+  commander->movL(1.0e-3, 2.0e-3, 3.0e-3, M_PI);
 }
 
+TEST_F(TestMotionCommander, MovL2) {
+  EXPECT_CALL(
+    mock, sendCommand(
+      StrEq(
+        "MovL(1.000,2.000,3.000,180.000,SpeedL=100,AccL=50,CP=10)"))).Times(1);
+  commander->movL(1.0e-3, 2.0e-3, 3.0e-3, M_PI, 100, 50, 10);
+}
 
 TEST_F(TestMotionCommander, JointMovJ)
 {
   EXPECT_CALL(
     mock, sendCommand(
       StrEq(
-        "JointMovJ(90.000,90.000,90.000,90.000,90.000,90.000)"))).Times(1);
-  commander->jointMovJ(M_PI_2, M_PI_2, M_PI_2, M_PI_2, M_PI_2, M_PI_2);
+        "JointMovJ(90.000,90.000,90.000,90.000)"))).Times(1);
+  commander->jointMovJ(M_PI_2, M_PI_2, M_PI_2, M_PI_2);
+}
+
+TEST_F(TestMotionCommander, JointMovJ2)
+{
+  EXPECT_CALL(
+    mock, sendCommand(
+      StrEq(
+        "JointMovJ(90.000,90.000,90.000,90.000,SpeedJ=100,AccJ=50,CP=10)"))).Times(1);
+  commander->jointMovJ(M_PI_2, M_PI_2, M_PI_2, M_PI_2, 100, 50, 10);
 }
 
 TEST_F(TestMotionCommander, MovLIO) {
   EXPECT_CALL(
     mock, sendCommand(
       StrEq(
-        "MovLIO(-500.000,100.000,200.000,"
-        "90.000,0.000,90.000,{0,50,1,0})"))).Times(1);
+        "MovLIO(-500.000,100.000,200.000,90.000,{0,50,1,0})"))).Times(1);
   commander->movLIO(
-    -500e-3, 100e-3, 200e-3, M_PI_2, 0, M_PI_2,
+    -500e-3, 100e-3, 200e-3, M_PI_2,
     DistanceMode::PERCENTAGE, 50, DOIndex::D1, DOStatus::LOW);
+}
+
+TEST_F(TestMotionCommander, MovLIO2) {
+  EXPECT_CALL(
+    mock, sendCommand(
+      StrEq(
+        "MovLIO(-500.000,100.000,200.000,90.000,{0,50,1,0},SpeedL=100,AccL=50,CP=10)"))).Times(1);
+  commander->movLIO(
+    -500e-3, 100e-3, 200e-3, M_PI_2,
+    DistanceMode::PERCENTAGE, 50, DOIndex::D1, DOStatus::LOW,
+    100, 50, 10);
 }
 
 TEST_F(TestMotionCommander, MovJIO) {
   EXPECT_CALL(
     mock, sendCommand(
       StrEq(
-        "MovJIO(-500.000,100.000,200.000,"
-        "90.000,0.000,90.000,{0,50,1,0})"))).Times(1);
+        "MovJIO(-500.000,100.000,200.000,90.000,{0,50,1,0})"))).Times(1);
   commander->movJIO(
-    -500e-3, 100e-3, 200e-3, M_PI_2, 0, M_PI_2,
+    -500e-3, 100e-3, 200e-3, M_PI_2,
     DistanceMode::PERCENTAGE, 50, DOIndex::D1, DOStatus::LOW);
 }
+
+TEST_F(TestMotionCommander, MovJIO2) {
+  EXPECT_CALL(
+    mock, sendCommand(
+      StrEq(
+        "MovJIO(-500.000,100.000,200.000,90.000,{0,50,1,0},SpeedJ=100,AccJ=50,CP=10)"))).Times(1);
+  commander->movJIO(
+    -500e-3, 100e-3, 200e-3, M_PI_2,
+    DistanceMode::PERCENTAGE, 50, DOIndex::D1, DOStatus::LOW,
+    100, 50, 10);
+}
+
 /*
 TEST_F(TestMotionCommander, Arc) {
   EXPECT_CALL(
@@ -132,31 +177,52 @@ TEST_F(TestMotionCommander, RelMovJUser) {
   EXPECT_CALL(
     mock, sendCommand(
       StrEq(
-        "RelMovJUser(10.000,10.000,10.000,"
-        "0.000,0.000,0.000,0)"))).Times(1);
+        "RelMovJUser(10.000,10.000,10.000,0.000,0)"))).Times(1);
   commander->relMovJUser(
-    10e-3, 10e-3, 10e-3, 0, 0, 0,
-    User::USER0);
+    10e-3, 10e-3, 10e-3, 0, User::USER0);
+}
+
+TEST_F(TestMotionCommander, RelMovJUser2) {
+  EXPECT_CALL(
+    mock, sendCommand(
+      StrEq(
+        "RelMovJUser(10.000,10.000,10.000,0.000,0,SpeedJ=100,AccJ=50,CP=10)"))).Times(1);
+  commander->relMovJUser(
+    10e-3, 10e-3, 10e-3, 0, User::USER0, 100, 50, 10);
 }
 
 TEST_F(TestMotionCommander, RelMovLUser) {
   EXPECT_CALL(
     mock, sendCommand(
       StrEq(
-        "RelMovLUser(10.000,10.000,10.000,"
-        "0.000,0.000,0.000,0)"))).Times(1);
+        "RelMovLUser(10.000,10.000,10.000,0.000,0)"))).Times(1);
   commander->relMovLUser(
-    10e-3, 10e-3, 10e-3, 0, 0, 0,
-    User::USER0);
+    10e-3, 10e-3, 10e-3, 0, User::USER0);
+}
+
+TEST_F(TestMotionCommander, RelMovLUser2) {
+  EXPECT_CALL(
+    mock, sendCommand(
+      StrEq(
+        "RelMovLUser(10.000,10.000,10.000,0.000,0,SpeedL=100,AccL=50,CP=10)"))).Times(1);
+  commander->relMovLUser(
+    10e-3, 10e-3, 10e-3, 0, User::USER0, 100, 50, 10);
 }
 
 TEST_F(TestMotionCommander, RelJointMovJ) {
   EXPECT_CALL(
     mock, sendCommand(
       StrEq(
-        "RelJointMovJ(90.000,90.000,90.000,"
-        "0.000,0.000,0.000)"))).Times(1);
+        "RelJointMovJ(90.000,90.000,90.000,0.000)"))).Times(1);
   commander->relJointMovJ(
-    M_PI_2, M_PI_2, M_PI_2,
-    0, 0, 0);
+    M_PI_2, M_PI_2, M_PI_2, 0);
+}
+
+TEST_F(TestMotionCommander, RelJointMovJ2) {
+  EXPECT_CALL(
+    mock, sendCommand(
+      StrEq(
+        "RelJointMovJ(90.000,90.000,90.000,0.000,SpeedJ=100,AccJ=50,CP=10)"))).Times(1);
+  commander->relJointMovJ(
+    M_PI_2, M_PI_2, M_PI_2, 0, 100, 50, 10);
 }
