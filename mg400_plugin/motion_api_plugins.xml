@@ -14,4 +14,14 @@
       base_class_type="mg400_plugin_base::MotionApiPluginBase">
     <description>Execute MoveJog</description>
   </class>
+  <class
+      type="mg400_plugin::MovJIO"
+      base_class_type="mg400_plugin_base::MotionApiPluginBase">
+    <description>Execute MovJIO</description>
+  </class>
+  <class
+      type="mg400_plugin::MovLIO"
+      base_class_type="mg400_plugin_base::MotionApiPluginBase">
+    <description>Execute MovLIO</description>
+  </class>
 </library>
