@@ -53,39 +53,46 @@ public:
   // DOBOT MG400 Official Command ---------------------------------------------
   void movJ(
     const si_m, const si_m, const si_m,
-    const si_rad, const si_rad = 0.0, const si_rad = 0.0);
+    const si_rad, const si_rad = 0.0, const si_rad = 0.0,
+    const int8_t = -1, const int8_t = -1, const int8_t = -1);
 
   void movL(
     const si_m, const si_m, const si_m,
-    const si_rad, const si_rad = 0.0, const si_rad = 0.0);
+    const si_rad, const si_rad = 0.0, const si_rad = 0.0,
+    const int8_t = -1, const int8_t = -1, const int8_t = -1);
 
   void jointMovJ(
     const si_rad, const si_rad, const si_rad,
-    const si_rad, const si_rad, const si_rad);
+    const si_rad, const si_rad, const si_rad,
+    const int8_t = -1, const int8_t = -1, const int8_t = -1);
 
   void movLIO(
     const si_m, const si_m, const si_m,
     const si_rad, const si_rad, const si_rad,
     const DistanceMode &, const int &,
-    const DOIndex &, const DOStatus &);
+    const DOIndex &, const DOStatus &,
+    const int8_t = -1, const int8_t = -1, const int8_t = -1);
   void movLIO(
     const si_m, const si_m, const si_m,
     const si_rad, const si_rad, const si_rad,
     const DistanceMode::_mode_type &, const int &,
     const DOIndex::_index_type &,
-    const DOStatus::_status_type &);
+    const DOStatus::_status_type &,
+    const int8_t = -1, const int8_t = -1, const int8_t = -1);
 
   void movJIO(
     const si_m, const si_m, const si_m,
     const si_rad, const si_rad, const si_rad,
     const DistanceMode &, const int &,
-    const DOIndex &, const DOStatus &);
+    const DOIndex &, const DOStatus &,
+    const int8_t = -1, const int8_t = -1, const int8_t = -1);
   void movJIO(
     const si_m, const si_m, const si_m,
     const si_rad, const si_rad, const si_rad,
     const DistanceMode::_mode_type &, const int &,
     const DOIndex::_index_type &,
-    const DOStatus::_status_type &);
+    const DOStatus::_status_type &,
+    const int8_t = -1, const int8_t = -1, const int8_t = -1);
 
 /* https://github.com/Dobot-Arm/TCP-IP-CR-Python/issues/4#:~:text=The%20arc%20function%20needs%20to%20be%20fixed%20by%20Dobot
   void arc(
@@ -103,24 +110,29 @@ public:
   void relMovJUser(
     const si_m, const si_m, const si_m,
     const si_rad, const si_rad, const si_rad,
-    const User &);
+    const User &,
+    const int8_t = -1, const int8_t = -1, const int8_t = -1);
   void relMovJUser(
     const si_m, const si_m, const si_m,
     const si_rad, const si_rad, const si_rad,
-    const User::_user_type &);
+    const User::_user_type &,
+    const int8_t = -1, const int8_t = -1, const int8_t = -1);
 
   void relMovLUser(
     const si_m, const si_m, const si_m,
     const si_rad, const si_rad, const si_rad,
-    const User &);
+    const User &,
+    const int8_t = -1, const int8_t = -1, const int8_t = -1);
   void relMovLUser(
     const si_m, const si_m, const si_m,
     const si_rad, const si_rad, const si_rad,
-    const User::_user_type &);
+    const User::_user_type &,
+    const int8_t = -1, const int8_t = -1, const int8_t = -1);
 
   void relJointMovJ(
     const si_rad, const si_rad, const si_rad,
-    const si_rad, const si_rad, const si_rad);
+    const si_rad, const si_rad, const si_rad,
+    const int8_t = -1, const int8_t = -1, const int8_t = -1);
 
 
   // End DOBOT MG400 Official Command -----------------------------------------
