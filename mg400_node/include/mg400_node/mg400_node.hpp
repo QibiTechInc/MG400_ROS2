@@ -46,13 +46,15 @@ private:
     "mg400_plugin::ResetRobot",
     "mg400_plugin::SetCollisionLevel",
     "mg400_plugin::SpeedFactor",
-    "mg400_plugin::ToolDOExecute"
+    "mg400_plugin::ToolDOExecute",
   };
 
   const std::vector<std::string> default_motion_api_plugins_ = {
     "mg400_plugin::MoveJog",
     "mg400_plugin::MovJ",
-    "mg400_plugin::MovL"
+    "mg400_plugin::MovL",
+    "mg400_plugin::MovJIO",
+    "mg400_plugin::MovLIO",
   };
 
   std::string ip_address_;
