@@ -24,103 +24,160 @@ MotionCommander::MotionCommander(MotionTcpInterfaceBase * tcp_if)
 // DOBOT MG400 Official Command ---------------------------------------------
 void MotionCommander::movJ(
   const si_m x, const si_m y, const si_m z,
-  const si_rad rx, const si_rad ry, const si_rad rz)
+  const double r, const int8_t speed_j, const int8_t acc_j, const int8_t cp)
 {
   std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
-  char buf[100];
+  char buf[200];
   snprintf(
     buf, sizeof(buf),
-    "MovJ(%.3lf,%.3lf,%.3lf,%.3lf,%.3lf,%.3lf)",
-    m2mm(x), m2mm(y), m2mm(z),
-    rad2degree(rx), rad2degree(ry), rad2degree(rz));
+    "MovJ(%.3lf,%.3lf,%.3lf,%.3lf",
+    m2mm(x), m2mm(y), m2mm(z), rad2degree(r));
+
+  if (speed_j >= 0) {
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ",SpeedJ=%d", speed_j);
+  }
+  if (acc_j >= 0) {
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ",AccJ=%d", acc_j);
+  }
+  if (cp >= 0) {
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ",CP=%d", cp);
+  }
+
+  snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ")");
   this->tcp_if_->sendCommand(buf);
 }
 
 void MotionCommander::movL(
   const si_m x, const si_m y, const si_m z,
-  const si_rad rx, const si_rad ry, const si_rad rz)
+  const si_rad r, const int8_t speed_l, const int8_t acc_l, const int8_t cp)
 {
   std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   char buf[100];
   snprintf(
     buf, sizeof(buf),
-    "MovL(%.3lf,%.3lf,%.3lf,%.3lf,%.3lf,%.3lf)",
-    m2mm(x), m2mm(y), m2mm(z),
-    rad2degree(rx), rad2degree(ry), rad2degree(rz));
+    "MovL(%.3lf,%.3lf,%.3lf,%.3lf",
+    m2mm(x), m2mm(y), m2mm(z), rad2degree(r));
+
+  if (speed_l >= 0) {
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ",SpeedL=%d", speed_l);
+  }
+  if (acc_l >= 0) {
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ",AccL=%d", acc_l);
+  }
+  if (cp >= 0) {
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ",CP=%d", cp);
+  }
+
+  strncat(buf, ")", sizeof(buf) - strlen(buf) - 1);
   this->tcp_if_->sendCommand(buf);
 }
 
 void MotionCommander::jointMovJ(
-  const si_rad j1, const si_rad j2, const si_rad j3,
-  const si_rad j4, const si_rad j5, const si_rad j6)
+  const si_rad j1, const si_rad j2, const si_rad j3, const si_rad j4,
+  const int8_t speed_j, const int8_t acc_j, const int8_t cp)
 {
   std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   char buf[100];
   snprintf(
     buf, sizeof(buf),
-    "JointMovJ(%.3lf,%.3lf,%.3lf,%.3lf,%.3lf,%.3lf)",
-    rad2degree(j1), rad2degree(j2), rad2degree(j3),
-    rad2degree(j4), rad2degree(j5), rad2degree(j6));
+    "JointMovJ(%.3lf,%.3lf,%.3lf,%.3lf",
+    rad2degree(j1), rad2degree(j2), rad2degree(j3), rad2degree(j4));
+
+  if (speed_j >= 0) {
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ",SpeedJ=%d", speed_j);
+  }
+  if (acc_j >= 0) {
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ",AccJ=%d", acc_j);
+  }
+  if (cp >= 0) {
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ",CP=%d", cp);
+  }
+
+  strncat(buf, ")", sizeof(buf) - strlen(buf) - 1);
   this->tcp_if_->sendCommand(buf);
 }
 
 void MotionCommander::movLIO(
-  const si_m x, const si_m y, const si_m z,
-  const si_rad rx, const si_rad ry, const si_rad rz,
+  const si_m x, const si_m y, const si_m z, const si_rad r,
   const DistanceMode & mode, const int & distance,
-  const DOIndex & index, const DOStatus & status)
+  const DOIndex & index, const DOStatus & status,
+  const int8_t speed_l, const int8_t acc_l, const int8_t cp)
 {
   this->movLIO(
-    x, y, z, rx, ry, rz,
+    x, y, z, r,
     mode.mode, distance,
-    index.index, status.status);
+    index.index, status.status,
+    speed_l, acc_l, cp);
 }
 
 void MotionCommander::movLIO(
-  const si_m x, const si_m y, const si_m z,
-  const si_rad rx, const si_rad ry, const si_rad rz,
+  const si_m x, const si_m y, const si_m z, const si_rad r,
   const DistanceMode::_mode_type & mode,
   const int & distance,
   const DOIndex::_index_type & index,
-  const DOStatus::_status_type & status)
+  const DOStatus::_status_type & status,
+  const int8_t speed_l, const int8_t acc_l, const int8_t cp)
 {
   std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   char buf[100];
   snprintf(
     buf, sizeof(buf),
-    "MovLIO(%.3lf,%.3lf,%.3lf,%.3lf,%.3lf,%.3lf,{%u,%d,%u,%u})",
-    m2mm(x), m2mm(y), m2mm(z),
-    rad2degree(rx), rad2degree(ry), rad2degree(rz),
+    "MovLIO(%.3lf,%.3lf,%.3lf,%.3lf,{%u,%d,%u,%u}",
+    m2mm(x), m2mm(y), m2mm(z), rad2degree(r),
     mode, distance, index, status);
+
+  if (speed_l >= 0) {
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ",SpeedL=%d", speed_l);
+  }
+  if (acc_l >= 0) {
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ",AccL=%d", acc_l);
+  }
+  if (cp >= 0) {
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ",CP=%d", cp);
+  }
+
+  strncat(buf, ")", sizeof(buf) - strlen(buf) - 1);
   this->tcp_if_->sendCommand(buf);
 }
 
 void MotionCommander::movJIO(
-  const si_m x, const si_m y, const si_m z,
-  const si_rad rx, const si_rad ry, const si_rad rz,
+  const si_m x, const si_m y, const si_m z, const si_rad r,
   const DistanceMode & mode, const int & distance,
-  const DOIndex & index, const DOStatus & status)
+  const DOIndex & index, const DOStatus & status,
+  const int8_t speed_j, const int8_t acc_j, const int8_t cp)
 {
   this->movJIO(
-    x, y, z, rx, ry, rz,
-    mode.mode, distance, index.index, status.status);
+    x, y, z, r,
+    mode.mode, distance, index.index, status.status,
+    speed_j, acc_j, cp);
 }
 
 void MotionCommander::movJIO(
-  const si_m x, const si_m y, const si_m z,
-  const si_rad rx, const si_rad ry, const si_rad rz,
+  const si_m x, const si_m y, const si_m z, const si_rad r,
   const DistanceMode::_mode_type & mode, const int & distance,
   const DOIndex::_index_type & index,
-  const DOStatus::_status_type & status)
+  const DOStatus::_status_type & status,
+  const int8_t speed_j, const int8_t acc_j, const int8_t cp)
 {
   std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   char buf[100];
   snprintf(
     buf, sizeof(buf),
-    "MovJIO(%.3lf,%.3lf,%.3lf,%.3lf,%.3lf,%.3lf,{%u,%d,%u,%u})",
-    m2mm(x), m2mm(y), m2mm(z),
-    rad2degree(rx), rad2degree(ry), rad2degree(rz),
+    "MovJIO(%.3lf,%.3lf,%.3lf,%.3lf,{%u,%d,%u,%u}",
+    m2mm(x), m2mm(y), m2mm(z), rad2degree(r),
     mode, distance, index, status);
+
+  if (speed_j >= 0) {
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ",SpeedJ=%d", speed_j);
+  }
+  if (acc_j >= 0) {
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ",AccJ=%d", acc_j);
+  }
+  if (cp >= 0) {
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ",CP=%d", cp);
+  }
+
+  strncat(buf, ")", sizeof(buf) - strlen(buf) - 1);
   this->tcp_if_->sendCommand(buf);
 }
 
@@ -167,66 +224,96 @@ void MotionCommander::sync()
 }
 
 void MotionCommander::relMovJUser(
-  const si_m x, const si_m y, const si_m z,
-  const si_rad rx, const si_rad ry, const si_rad rz,
-  const User & user)
+  const si_m x, const si_m y, const si_m z, const si_rad r, const User & user,
+  const int8_t speed_j, const int8_t acc_j, const int8_t cp)
 {
   this->relMovJUser(
-    x, y, z, rx, ry, rz,
-    user.user);
+    x, y, z, r, user.user,
+    speed_j, acc_j, cp);
 }
 
 void MotionCommander::relMovJUser(
-  const si_m x, const si_m y, const si_m z,
-  const si_rad rx, const si_rad ry, const si_rad rz,
-  const User::_user_type & user)
+  const si_m x, const si_m y, const si_m z, const si_rad r, const User::_user_type & user,
+  const int8_t speed_j, const int8_t acc_j, const int8_t cp)
 {
   std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   char buf[100];
   snprintf(
     buf, sizeof(buf),
-    "RelMovJUser(%.3lf,%.3lf,%.3lf,%.3lf,%.3lf,%.3lf,%u)",
-    m2mm(x), m2mm(y), m2mm(z),
-    rad2degree(rx), rad2degree(ry), rad2degree(rz), user);
+    "RelMovJUser(%.3lf,%.3lf,%.3lf,%.3lf,%u",
+    m2mm(x), m2mm(y), m2mm(z), rad2degree(r), user);
+
+  if (speed_j >= 0) {
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ",SpeedJ=%d", speed_j);
+  }
+  if (acc_j >= 0) {
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ",AccJ=%d", acc_j);
+  }
+  if (cp >= 0) {
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ",CP=%d", cp);
+  }
+
+  strncat(buf, ")", sizeof(buf) - strlen(buf) - 1);
   this->tcp_if_->sendCommand(buf);
 }
 
 void MotionCommander::relMovLUser(
-  const si_m x, const si_m y, const si_m z,
-  const si_rad rx, const si_rad ry, const si_rad rz,
-  const User & user)
+  const si_m x, const si_m y, const si_m z, const si_rad r, const User & user,
+  const int8_t speed_j, const int8_t acc_j, const int8_t cp)
 {
   this->relMovLUser(
-    x, y, z, rx, ry, rz,
-    user.user);
+    x, y, z, r,
+    user.user,
+    speed_j, acc_j, cp);
 }
 
 void MotionCommander::relMovLUser(
-  const si_m x, const si_m y, const si_m z,
-  const si_rad rx, const si_rad ry, const si_rad rz,
-  const User::_user_type & user)
+  const si_m x, const si_m y, const si_m z, const si_rad r, const User::_user_type & user,
+  const int8_t speed_l, const int8_t acc_l, const int8_t cp)
 {
   std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   char buf[100];
   snprintf(
     buf, sizeof(buf),
-    "RelMovLUser(%.3lf,%.3lf,%.3lf,%.3lf,%.3lf,%.3lf,%u)",
-    m2mm(x), m2mm(y), m2mm(z),
-    rad2degree(rx), rad2degree(ry), rad2degree(rz), user);
+    "RelMovLUser(%.3lf,%.3lf,%.3lf,%.3lf,%u",
+    m2mm(x), m2mm(y), m2mm(z), rad2degree(r), user);
+
+  if (speed_l >= 0) {
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ",SpeedL=%d", speed_l);
+  }
+  if (acc_l >= 0) {
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ",AccL=%d", acc_l);
+  }
+  if (cp >= 0) {
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ",CP=%d", cp);
+  }
+
+  strncat(buf, ")", sizeof(buf) - strlen(buf) - 1);
   this->tcp_if_->sendCommand(buf);
 }
 
 void MotionCommander::relJointMovJ(
-  const si_rad j1, const si_rad j2, const si_rad j3,
-  const si_rad j4, const si_rad j5, const si_rad j6)
+  const si_rad j1, const si_rad j2, const si_rad j3, const si_rad j4,
+  const int8_t speed_j, const int8_t acc_j, const int8_t cp)
 {
   std::lock_guard<std::mutex> lock_tcp_if_(this->mutex_tcp_if_);
   char buf[100];
   snprintf(
     buf, sizeof(buf),
-    "RelJointMovJ(%.3lf,%.3lf,%.3lf,%.3lf,%.3lf,%.3lf)",
-    rad2degree(j1), rad2degree(j2), rad2degree(j3),
-    rad2degree(j4), rad2degree(j5), rad2degree(j6));
+    "RelJointMovJ(%.3lf,%.3lf,%.3lf,%.3lf",
+    rad2degree(j1), rad2degree(j2), rad2degree(j3), rad2degree(j4));
+
+  if (speed_j >= 0) {
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ",SpeedJ=%d", speed_j);
+  }
+  if (acc_j >= 0) {
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ",AccJ=%d", acc_j);
+  }
+  if (cp >= 0) {
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ",CP=%d", cp);
+  }
+
+  strncat(buf, ")", sizeof(buf) - strlen(buf) - 1);
   this->tcp_if_->sendCommand(buf);
 }
 
