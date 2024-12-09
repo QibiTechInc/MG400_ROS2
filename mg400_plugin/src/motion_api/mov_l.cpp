@@ -136,10 +136,23 @@ void MovL::execute(const std::shared_ptr<GoalHandle> goal_handle)
 
   // send MovL command
   try {
+    int8_t speed_l = -1;
+    int8_t acc_l = -1;
+    int8_t cp = -1;
+    if (goal->set_speed_l) {
+      speed_l = goal->speed_l;
+    }
+    if (goal->set_acc_l) {
+      acc_l = goal->acc_l;
+    }
+    if (goal->set_cp) {
+      cp = goal->cp;
+    }
     this->commander_->movL(
       this->tf_goal_.pose.position.x, this->tf_goal_.pose.position.y,
       this->tf_goal_.pose.position.z,
-      tf2::getYaw(this->tf_goal_.pose.orientation));
+      tf2::getYaw(this->tf_goal_.pose.orientation),
+      speed_l, acc_l, cp);
   } catch (const std::exception & e) {
     RCLCPP_ERROR(
       this->node_logging_if_->get_logger(), e.what());
