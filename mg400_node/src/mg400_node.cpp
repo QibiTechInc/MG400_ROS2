@@ -135,7 +135,7 @@ CallbackReturn MG400Node::on_deactivate(const State &)
   this->cancelTimer();
   this->interface_->deactivate();
 
-  if (this->connection_interrupted_) {
+  if (this->get_parameter("auto_connect").as_bool() || this->connection_interrupted_) {
     RCLCPP_INFO(this->get_logger(), "Try reconnecting in 5 seconds ...");
     this->connect_timer_ = this->create_wall_timer(5s, [this]() {this->activate();});
   }
