@@ -51,7 +51,8 @@ void SpeedFactor::onServiceCall(
   if (this->mg400_interface_->ok()) {
     try {
       uint8_t ratio = plugin_utils::clampWithWarning(
-        req->ratio, plugin_utils::SPEED_FACTOR_MIN, plugin_utils::SPEED_FACTOR_MAX, "speed_factor");
+        req->ratio, plugin_utils::SPEED_FACTOR_MIN, plugin_utils::SPEED_FACTOR_MAX,
+        this->node_logging_if_->get_logger(), "speed_factor");
       this->commander_->speedFactor(static_cast<int>(ratio));
       res->result = true;
       res->error_id = 0;

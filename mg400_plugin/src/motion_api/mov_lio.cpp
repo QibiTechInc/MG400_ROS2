@@ -142,16 +142,19 @@ void MovLIO::execute(const std::shared_ptr<GoalHandle> goal_handle)
     int8_t cp = -1;
     if (goal->set_speed_l) {
       speed_l = plugin_utils::clampWithWarning(
-        goal->speed_l, plugin_utils::SPEED_L_MIN, plugin_utils::SPEED_L_MAX, "speed_l");
+        goal->speed_l, plugin_utils::SPEED_L_MIN, plugin_utils::SPEED_L_MAX,
+        this->node_logging_if_->get_logger(), "speed_l");
     }
     if (goal->set_acc_l) {
       acc_l = plugin_utils::clampWithWarning(
-        goal->acc_l, plugin_utils::ACC_L_MIN, plugin_utils::ACC_L_MAX, "acc_l");
+        goal->acc_l, plugin_utils::ACC_L_MIN, plugin_utils::ACC_L_MAX,
+        this->node_logging_if_->get_logger(), "acc_l");
     }
     if (goal->set_cp) {
       cp =
         plugin_utils::clampWithWarning(
-        goal->cp, plugin_utils::CP_MIN, plugin_utils::CP_MAX, "cp");
+        goal->cp, plugin_utils::CP_MIN, plugin_utils::CP_MAX,
+        this->node_logging_if_->get_logger(), "cp");
     }
     this->commander_->movLIO(
       this->tf_goal_.pose.position.x, this->tf_goal_.pose.position.y,

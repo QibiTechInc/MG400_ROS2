@@ -16,6 +16,7 @@
 #define __MG400_PLUGIN_PLUGIN_UTILS_HPP__
 
 #include <string>
+#include <rclcpp/rclcpp.hpp>
 
 namespace mg400_plugin
 {
@@ -33,13 +34,18 @@ const uint8_t CP_MIN = 0, CP_MAX = 100;
 
 
 template<typename T>
-inline T clampWithWarning(T value, T min, T max, const std::string & name)
+inline T clampWithWarning(
+  T value, T min, T max, const rclcpp::Logger & logger, const std::string & arg_name)
 {
   if (value < min) {
-    std::cerr << "[Warning] " << name << " clamped from " << +value << " to " << +min << std::endl;
+    RCLCPP_WARN(
+      logger, "%s clamped from %d to %d",
+      arg_name.c_str(), static_cast<int>(value), static_cast<int>(min));
     return min;
   } else if (value > max) {
-    std::cerr << "[Warning] " << name << " clamped from " << +value << " to " << +max << std::endl;
+    RCLCPP_WARN(
+      logger, "%s clamped from %d to %d",
+      arg_name.c_str(), static_cast<int>(value), static_cast<int>(max));
     return max;
   }
   return value;

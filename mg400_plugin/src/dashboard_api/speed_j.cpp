@@ -53,7 +53,8 @@ void SpeedJ::onServiceCall(
   if (this->mg400_interface_->ok()) {
     try {
       uint8_t r = plugin_utils::clampWithWarning(
-        req->r, plugin_utils::SPEED_J_MIN, plugin_utils::SPEED_J_MAX, "speed_j");
+        req->r, plugin_utils::SPEED_J_MIN, plugin_utils::SPEED_J_MAX,
+        this->node_logging_if_->get_logger(), "speed_j");
       this->commander_->speedJ(static_cast<int>(r));
       res->result = true;
       res->error_id = 0;

@@ -53,7 +53,8 @@ void SpeedL::onServiceCall(
   if (this->mg400_interface_->ok()) {
     try {
       uint8_t r = plugin_utils::clampWithWarning(
-        req->r, plugin_utils::SPEED_L_MIN, plugin_utils::SPEED_L_MAX, "speed_l");
+        req->r, plugin_utils::SPEED_L_MIN, plugin_utils::SPEED_L_MAX,
+        this->node_logging_if_->get_logger(), "speed_l");
       this->commander_->speedL(static_cast<int>(r));
       res->result = true;
       res->error_id = 0;
