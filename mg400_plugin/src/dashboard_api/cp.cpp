@@ -51,7 +51,9 @@ void CP::onServiceCall(
   res->error_id = -1;
   if (this->mg400_interface_->ok()) {
     try {
-      this->commander_->cp(req->r);
+      uint8_t r = plugin_utils::clampWithWarning(
+        req->r, plugin_utils::CP_MIN, plugin_utils::CP_MAX, "cp");
+      this->commander_->cp(r);
       res->result = true;
       res->error_id = 0;
     } catch (const mg400_interface::DashboardCommandException & ex) {
