@@ -16,6 +16,7 @@
 #define __MG400_PLUGIN_DASHBOARD_API_SPEED_FACTOR_HPP__
 
 #include <mg400_plugin_base/api_plugin_base.hpp>
+#include <mg400_plugin/plugin_utils.hpp>
 #include <mg400_msgs/srv/speed_factor.hpp>
 
 namespace mg400_plugin

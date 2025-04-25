@@ -16,6 +16,7 @@
 #define __MG400_PLUGIN_DASHBOARD_API_ACC_J_HPP__
 
 #include <mg400_plugin_base/api_plugin_base.hpp>
+#include <mg400_plugin/plugin_utils.hpp>
 #include <mg400_msgs/srv/acc_j.hpp>
 
 namespace mg400_plugin
