@@ -52,7 +52,7 @@ void CP::onServiceCall(
   if (this->mg400_interface_->ok()) {
     try {
       uint8_t r = plugin_utils::clampWithWarning(
-        req->r, plugin_utils::CP_MIN, plugin_utils::CP_MAX, "cp");
+        static_cast<uint8_t>(req->r), plugin_utils::CP_MIN, plugin_utils::CP_MAX, "cp");
       this->commander_->cp(r);
       res->result = true;
       res->error_id = 0;
