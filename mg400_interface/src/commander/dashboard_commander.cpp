@@ -159,6 +159,24 @@ void DashboardCommander::toolDOExecute(
   this->evaluateResponse(this->sendAndWaitResponse(std::string(buf, cx)));
 }
 
+int DashboardCommander::toolDI(const ToolDIIndex & tool_di_index) const
+{
+  return this->toolDI(tool_di_index.index);
+}
+
+int DashboardCommander::toolDI(const ToolDIIndex::_index_type & tool_di_index) const
+{
+  static char buf[128];
+  static DashboardResponse response;
+  const int cx = snprintf(buf, sizeof(buf), "ToolDI(%u)", tool_di_index);
+  ResponseParser::parseResponse(
+    this->sendAndWaitResponse(std::string(buf, cx)), response);
+  if (response.error_id != 0) {
+    throw std::runtime_error("Dobot not return 0: " + std::to_string(response.error_id));
+  }
+  return ResponseParser::takeInt(response.ret_val);
+}
+
 void DashboardCommander::accJ(const int R)
 {
   static char buf[128];

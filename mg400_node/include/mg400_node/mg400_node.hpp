@@ -47,6 +47,7 @@ private:
     "mg400_plugin::SetCollisionLevel",
     "mg400_plugin::SpeedFactor",
     "mg400_plugin::ToolDOExecute",
+    "mg400_plugin::ToolDI",
   };
 
   const std::vector<std::string> default_motion_api_plugins_ = {

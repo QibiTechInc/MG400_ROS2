@@ -18,6 +18,7 @@ The following API interface plugin will be loaded by default
   - `SetCollisionLevel`
   - `SpeedFactor`
   - `ToolDOExecute`
+  - `ToolDI`
 - Motion API
   - `MoveJog`
   - `MovJ`
