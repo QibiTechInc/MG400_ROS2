@@ -26,7 +26,7 @@
 #include <mg400_msgs/msg/do_index.hpp>
 #include <mg400_msgs/msg/do_status.hpp>
 #include <mg400_msgs/msg/error_id.hpp>
-#include <mg400_msgs/msg/tool_di_index.hpp>  // Ensure this include is present
+#include <mg400_msgs/msg/tool_di_index.hpp>
 #include <mg400_msgs/msg/tool_do_index.hpp>
 #include <mg400_msgs/msg/tool.hpp>
 #include <mg400_msgs/msg/user.hpp>
