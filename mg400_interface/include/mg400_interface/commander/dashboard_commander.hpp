@@ -26,6 +26,7 @@
 #include <mg400_msgs/msg/do_index.hpp>
 #include <mg400_msgs/msg/do_status.hpp>
 #include <mg400_msgs/msg/error_id.hpp>
+#include <mg400_msgs/msg/tool_di_index.hpp>
 #include <mg400_msgs/msg/tool_do_index.hpp>
 #include <mg400_msgs/msg/tool.hpp>
 #include <mg400_msgs/msg/user.hpp>
@@ -54,6 +55,7 @@ private:
   using DOStatus = mg400_msgs::msg::DOStatus;
   using ErrorID = mg400_msgs::msg::ErrorID;
   using Tool = mg400_msgs::msg::Tool;
+  using ToolDIIndex = mg400_msgs::msg::ToolDIIndex;
   using ToolDOIndex = mg400_msgs::msg::ToolDOIndex;
   using User = mg400_msgs::msg::User;
 
@@ -107,6 +109,9 @@ public:
   void toolDOExecute(
     const ToolDOIndex::_index_type &,
     const DOStatus::_status_type &) const;
+
+  int toolDI(const ToolDIIndex &) const;
+  int toolDI(const ToolDIIndex::_index_type &) const;
 
   void accJ(const int);
 

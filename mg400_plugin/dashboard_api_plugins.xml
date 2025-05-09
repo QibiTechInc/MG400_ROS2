@@ -100,6 +100,11 @@
     <description>Execute end effector digital output</description>
   </class>
   <class
+      type="mg400_plugin::ToolDI"
+      base_class_type="mg400_plugin_base::DashboardApiPluginBase">
+    <description>Get digital input of end effector</description>
+  </class>
+  <class
       type="mg400_plugin::Tool"
       base_class_type="mg400_plugin_base::DashboardApiPluginBase">
     <description>Tool</description>

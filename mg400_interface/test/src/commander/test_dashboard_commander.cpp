@@ -182,6 +182,17 @@ TEST_F(TestDashboardCommander, ToolDOExecute) {
       ToolDOIndex::D2, DOStatus::HIGH));
 }
 
+TEST_F(TestDashboardCommander, ToolDI) {
+  EXPECT_CALL(
+    mock, sendCommand(
+      StrEq("ToolDI(1)"))).Times(1);
+  EXPECT_CALL(
+    mock, recvResponse()).WillOnce(
+    Return("0,{0},ToolDI(1);"));
+  const int ret = commander->toolDI(1);
+  ASSERT_EQ(ret, 0);
+}
+
 TEST_F(TestDashboardCommander, AccJ) {
   EXPECT_CALL(
     mock, sendCommand(
