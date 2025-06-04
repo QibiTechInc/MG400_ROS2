@@ -12,4 +12,4 @@ bool result
 mg400_msgs/ErrorID error_id
 ---
 #feedback definition
-float64[4] angles
+float64[4] current_angles

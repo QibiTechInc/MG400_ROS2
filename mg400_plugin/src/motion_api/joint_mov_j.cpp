@@ -177,11 +177,11 @@ void JointMovJ::execute(const std::shared_ptr<GoalHandle> goal_handle)
   // TODO(anyone): Should calculate timeout with expectation goal time
   const auto timeout = rclcpp::Duration(10s);
   const auto start = this->node_clock_if_->get_clock()->now();
-  update_angles(feedback->angles);
+  update_angles(feedback->current_angles);
 
   while (!this->mg400_interface_->realtime_tcp_interface->isRobotMode(RobotMode::RUNNING)) {
     if (this->node_clock_if_->get_clock()->now() - start > rclcpp::Duration(300ms)) {
-      if (is_goal_reached(feedback->angles, goal_angles)) {
+      if (is_goal_reached(feedback->current_angles, goal_angles)) {
         RCLCPP_INFO(
           this->node_logging_if_->get_logger(),
           "Arm is already at the goal.");
@@ -222,7 +222,7 @@ void JointMovJ::execute(const std::shared_ptr<GoalHandle> goal_handle)
     control_freq.sleep();
   }
 
-  while (!is_goal_reached(feedback->angles, goal_angles) ||
+  while (!is_goal_reached(feedback->current_angles, goal_angles) ||
     !this->mg400_interface_->realtime_tcp_interface->isRobotMode(RobotMode::ENABLE))
   {
     if (!this->mg400_interface_->ok()) {
@@ -268,7 +268,7 @@ void JointMovJ::execute(const std::shared_ptr<GoalHandle> goal_handle)
       return;
     }
 
-    update_angles(feedback->angles);
+    update_angles(feedback->current_angles);
     goal_handle->publish_feedback(feedback);
     control_freq.sleep();
   }
