@@ -56,6 +56,7 @@ private:
     "mg400_plugin::MovL",
     "mg400_plugin::MovJIO",
     "mg400_plugin::MovLIO",
+    "mg400_plugin::JointMovJ",
   };
 
   std::string ip_address_;

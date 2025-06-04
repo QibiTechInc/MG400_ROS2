@@ -152,16 +152,16 @@ void JointMovJ::execute(const std::shared_ptr<GoalHandle> goal_handle)
   const auto is_goal_reached = [&](
     const std::array<double, 4> & angles,
     const std::array<double, 4> & goal) -> bool {
-      const double tolerance_deg = 0.5;
+      const double tolerance_rad = 1. / 180. * M_PI;
       auto is_in_tolerance = [](
         const double val, const double tolerance) -> bool {
           return std::abs(val) < tolerance;
         };
 
-      return is_in_tolerance(angles[0] - goal[0], tolerance_deg) &&
-             is_in_tolerance(angles[1] - goal[1], tolerance_deg) &&
-             is_in_tolerance(angles[2] - goal[2], tolerance_deg) &&
-             is_in_tolerance(angles[3] - goal[3], tolerance_deg)
+      return is_in_tolerance(angles[0] - goal[0], tolerance_rad) &&
+             is_in_tolerance(angles[1] - goal[1], tolerance_rad) &&
+             is_in_tolerance(angles[2] - goal[2], tolerance_rad) &&
+             is_in_tolerance(angles[3] - goal[3], tolerance_rad)
       ;
     };
 
