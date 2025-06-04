@@ -24,4 +24,9 @@
       base_class_type="mg400_plugin_base::MotionApiPluginBase">
     <description>Execute MovLIO</description>
   </class>
+  <class
+      type="mg400_plugin::JointMovJ"
+      base_class_type="mg400_plugin_base::MotionApiPluginBase">
+    <description>Execute JointMovJ</description>
+  </class>
 </library>
