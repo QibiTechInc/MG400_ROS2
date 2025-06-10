@@ -1,4 +1,5 @@
 """Launch joy."""
+
 # Copyright 2022 HarvestX Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,32 +25,36 @@ from launch_ros.descriptions import ComposableNode
 def generate_launch_description():
     """Launch joy."""
     hw_type_arg = DeclareLaunchArgument(
-        'hw_type',
-        default_value=TextSubstitution(text='DualSense'),
-        description='Joy controller hardware type.')
+        "hw_type",
+        default_value=TextSubstitution(text="DualSense"),
+        description="Joy controller hardware type.",
+    )
 
     joy_container = ComposableNodeContainer(
-        name='joy_container',
-        namespace='mg400_joy',
-        package='rclcpp_components',
-        executable='component_container',
+        name="joy_container",
+        namespace="mg400_joy",
+        package="rclcpp_components",
+        executable="component_container",
         composable_node_descriptions=[
-                ComposableNode(
-                    package='joy',
-                    plugin='joy::Joy',
-                    name='joy',
-                    namespace='mg400',
-                ),
             ComposableNode(
-                    package='mg400_joy',
-                    plugin='mg400_joy::MG400JoyInterfaceNode',
-                    name='mg400_joy_interface_node',
-                    namespace='mg400',
-                    parameters=[{
-                        'hw_type': LaunchConfiguration('hw_type'),
-                    }],
-                )
-        ])
+                package="joy",
+                plugin="joy::Joy",
+                name="joy",
+                namespace="mg400",
+            ),
+            ComposableNode(
+                package="mg400_joy",
+                plugin="mg400_joy::MG400JoyInterfaceNode",
+                name="mg400_joy_interface_node",
+                namespace="mg400",
+                parameters=[
+                    {
+                        "hw_type": LaunchConfiguration("hw_type"),
+                    }
+                ],
+            ),
+        ],
+    )
 
     ld = LaunchDescription()
     ld.add_action(hw_type_arg)
