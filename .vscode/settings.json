@@ -18,8 +18,12 @@
     "files.trimFinalNewlines": true,
     "editor.defaultFormatter": "redhat.vscode-xml",
   },
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.formatOnSave": true
+  },
   "uncrustify.configPath.linux": ".vscode/uncrustify.cfg",
-  "xml.format.splitAttributes": true,
+  "xml.format.splitAttributes": "splitNewLine",
   "files.associations": {
     ".repos": "yaml",
     "/usr/include/c++**": "cpp",
