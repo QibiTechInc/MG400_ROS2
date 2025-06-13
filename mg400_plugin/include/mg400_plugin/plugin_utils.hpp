@@ -51,6 +51,43 @@ inline T clampWithWarning(
   return value;
 }
 
+inline int8_t clampParam(
+  bool should_set, int8_t value, int8_t min, int8_t max,
+  rclcpp::Logger logger, const std::string & name)
+{
+  return should_set ? plugin_utils::clampWithWarning(value, min, max, logger, name) : -1;
+}
+
+inline int8_t clampSpeedJ(bool should_set, int8_t value, rclcpp::Logger logger)
+{
+  return clampParam(
+    should_set, value, plugin_utils::SPEED_J_MIN, plugin_utils::SPEED_J_MAX, logger, "speed_j");
+}
+
+inline int8_t clampAccJ(bool should_set, int8_t value, rclcpp::Logger logger)
+{
+  return clampParam(
+    should_set, value, plugin_utils::ACC_J_MIN, plugin_utils::ACC_J_MAX, logger, "acc_j");
+}
+
+inline int8_t clampSpeedL(bool should_set, int8_t value, rclcpp::Logger logger)
+{
+  return clampParam(
+    should_set, value, plugin_utils::SPEED_L_MIN, plugin_utils::SPEED_L_MAX, logger, "speed_l");
+}
+
+inline int8_t clampAccL(bool should_set, int8_t value, rclcpp::Logger logger)
+{
+  return clampParam(
+    should_set, value, plugin_utils::ACC_L_MIN, plugin_utils::ACC_L_MAX, logger, "acc_l");
+}
+
+inline int8_t clampCP(bool should_set, int8_t value, rclcpp::Logger logger)
+{
+  return clampParam(should_set, value, plugin_utils::CP_MIN, plugin_utils::CP_MAX, logger, "cp");
+}
+
+
 }  // namespace plugin_utils
 
 }  // namespace mg400_plugin
