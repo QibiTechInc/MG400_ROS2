@@ -227,7 +227,10 @@ void CommandQueueClient::setPoseFromConfig(
 {
   const auto & pos = cmd_node["pos_m"];
   const auto & yaw = cmd_node["yaw_deg"].as<double>() * M_PI / 180.0;
+  const auto & frame_id = cmd_node["frame_id"].as<std::string>();
 
+  pose.header.stamp = this->get_clock()->now();
+  pose.header.frame_id = frame_id;
   pose.pose.position.x = pos[0].as<double>();
   pose.pose.position.y = pos[1].as<double>();
   pose.pose.position.z = pos[2].as<double>();
