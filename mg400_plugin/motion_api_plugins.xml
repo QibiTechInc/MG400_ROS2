@@ -29,4 +29,9 @@
       base_class_type="mg400_plugin_base::MotionApiPluginBase">
     <description>Execute JointMovJ</description>
   </class>
+  <class
+      type="mg400_plugin::CommandQueue"
+      base_class_type="mg400_plugin_base::MotionApiPluginBase">
+    <description>Execute Commands with queue</description>
+  </class>
 </library>
