@@ -54,7 +54,7 @@ void CommandQueue::configure(
 }
 
 rclcpp_action::GoalResponse CommandQueue::handle_goal(
-  const rclcpp_action::GoalUUID & /*uuid*/, ActionT::Goal::ConstSharedPtr /*goal*/)
+  const rclcpp_action::GoalUUID & /*uuid*/, ActionT::Goal::ConstSharedPtr goal)
 {
   if (!this->mg400_interface_->ok()) {
     RCLCPP_ERROR(
@@ -68,6 +68,12 @@ rclcpp_action::GoalResponse CommandQueue::handle_goal(
     this->mg400_interface_->realtime_tcp_interface->getRobotMode(mode);
     RCLCPP_ERROR(
       this->node_logging_if_->get_logger(), "Robot mode is not enabled: mode is %ld", mode);
+    return rclcpp_action::GoalResponse::REJECT;
+  }
+
+  // check if the requested goal is inside the mg400 range
+  if (!this->validateTarget(goal->commands)) {
+    RCLCPP_ERROR(this->node_logging_if_->get_logger(), "The targets are outside of the range.");
     return rclcpp_action::GoalResponse::REJECT;
   }
 
@@ -100,15 +106,6 @@ void CommandQueue::execute(const std::shared_ptr<GoalHandle> goal_handle)
   auto feedback = std::make_shared<ActionT::Feedback>();
   auto result = std::make_shared<ActionT::Result>();
   result->result = false;
-
-  // check if the requested goal is inside the mg400 range
-  if (!this->validateTarget(goal->commands)) {
-    RCLCPP_ERROR(this->node_logging_if_->get_logger(), "The targets are outside of the range.");
-    result->result = false;
-    result->error_id.controller.ids.emplace_back(18);
-    goal_handle->abort(result);
-    return;
-  }
 
   // send MovJ command
   try {
@@ -227,6 +224,12 @@ void CommandQueue::execute(const std::shared_ptr<GoalHandle> goal_handle)
 
 void CommandQueue::sendMovJ(const mg400_msgs::msg::MovJ & params)
 {
+  geometry_msgs::msg::PoseStamped tf_pose;
+  if (!transformPoseToOrigin(params.pose, tf_pose)) {
+    RCLCPP_ERROR(this->node_logging_if_->get_logger(), "Failed to transform pose in sendMovJ.");
+    return;
+  }
+
   int8_t speed_j = plugin_utils::clampSpeedJ(
     params.set_speed_j, params.speed_j, this->node_logging_if_->get_logger());
   int8_t acc_j = plugin_utils::clampAccJ(
@@ -235,14 +238,22 @@ void CommandQueue::sendMovJ(const mg400_msgs::msg::MovJ & params)
     params.set_cp, params.cp, this->node_logging_if_->get_logger());
 
   this->commander_->movJ(
-    params.pose.pose.position.x, params.pose.pose.position.y, params.pose.pose.position.z,
-    tf2::getYaw(params.pose.pose.orientation),
+    tf_pose.pose.position.x,
+    tf_pose.pose.position.y,
+    tf_pose.pose.position.z,
+    tf2::getYaw(tf_pose.pose.orientation),
     speed_j, acc_j, cp
   );
 }
 
 void CommandQueue::sendMovL(const mg400_msgs::msg::MovL & params)
 {
+  geometry_msgs::msg::PoseStamped tf_pose;
+  if (!transformPoseToOrigin(params.pose, tf_pose)) {
+    RCLCPP_ERROR(this->node_logging_if_->get_logger(), "Failed to transform pose in sendMovL.");
+    return;
+  }
+
   int8_t speed_l = plugin_utils::clampSpeedL(
     params.set_speed_l, params.speed_l, this->node_logging_if_->get_logger());
   int8_t acc_l = plugin_utils::clampAccL(
@@ -251,10 +262,10 @@ void CommandQueue::sendMovL(const mg400_msgs::msg::MovL & params)
     params.set_cp, params.cp, this->node_logging_if_->get_logger());
 
   this->commander_->movL(
-    params.pose.pose.position.x,
-    params.pose.pose.position.y,
-    params.pose.pose.position.z,
-    tf2::getYaw(params.pose.pose.orientation),
+    tf_pose.pose.position.x,
+    tf_pose.pose.position.y,
+    tf_pose.pose.position.z,
+    tf2::getYaw(tf_pose.pose.orientation),
     speed_l, acc_l, cp);
 }
 
@@ -277,6 +288,12 @@ void CommandQueue::sendJointMovJ(const mg400_msgs::msg::JointMovJ & params)
 
 void CommandQueue::sendMovJIO(const mg400_msgs::msg::MovJIO & params)
 {
+  geometry_msgs::msg::PoseStamped tf_pose;
+  if (!transformPoseToOrigin(params.pose, tf_pose)) {
+    RCLCPP_ERROR(this->node_logging_if_->get_logger(), "Failed to transform pose in sendMovJIO.");
+    return;
+  }
+
   int8_t speed_j = plugin_utils::clampSpeedJ(
     params.set_speed_j, params.speed_j, this->node_logging_if_->get_logger());
   int8_t acc_j = plugin_utils::clampAccJ(
@@ -288,10 +305,10 @@ void CommandQueue::sendMovJIO(const mg400_msgs::msg::MovJIO & params)
   // but MG400 firmware version 1.6 does not support it.
 
   this->commander_->movJIO(
-    params.pose.pose.position.x,
-    params.pose.pose.position.y,
-    params.pose.pose.position.z,
-    tf2::getYaw(params.pose.pose.orientation),
+    tf_pose.pose.position.x,
+    tf_pose.pose.position.y,
+    tf_pose.pose.position.z,
+    tf2::getYaw(tf_pose.pose.orientation),
     params.mode,
     params.distance,
     params.index,
@@ -301,6 +318,12 @@ void CommandQueue::sendMovJIO(const mg400_msgs::msg::MovJIO & params)
 
 void CommandQueue::sendMovLIO(const mg400_msgs::msg::MovLIO & params)
 {
+  geometry_msgs::msg::PoseStamped tf_pose;
+  if (!transformPoseToOrigin(params.pose, tf_pose)) {
+    RCLCPP_ERROR(this->node_logging_if_->get_logger(), "Failed to transform pose in sendMovLIO.");
+    return;
+  }
+
   int8_t speed_l = plugin_utils::clampSpeedL(
     params.set_speed_l, params.speed_l, this->node_logging_if_->get_logger());
   int8_t acc_l = plugin_utils::clampAccL(
@@ -312,10 +335,10 @@ void CommandQueue::sendMovLIO(const mg400_msgs::msg::MovLIO & params)
   // but MG400 firmware version 1.6 does not support it.
 
   this->commander_->movLIO(
-    params.pose.pose.position.x,
-    params.pose.pose.position.y,
-    params.pose.pose.position.z,
-    tf2::getYaw(params.pose.pose.orientation),
+    tf_pose.pose.position.x,
+    tf_pose.pose.position.y,
+    tf_pose.pose.position.z,
+    tf2::getYaw(tf_pose.pose.orientation),
     params.mode,
     params.distance,
     params.index,
@@ -356,13 +379,37 @@ void CommandQueue::sendCommand(const std::vector<mg400_msgs::msg::Command> & com
   }
 }
 
-bool CommandQueue::validateIK(const geometry_msgs::msg::Pose & pose)
+bool CommandQueue::transformPoseToOrigin(
+  const geometry_msgs::msg::PoseStamped & input_pose,
+  geometry_msgs::msg::PoseStamped & output_pose)
 {
+  try {
+    auto transform = this->tf_buffer_->lookupTransform(
+      this->mg400_interface_->realtime_tcp_interface->frame_id_prefix + "mg400_origin_link",
+      input_pose.header.frame_id,
+      rclcpp::Time(0)
+    );
+    tf2::doTransform(input_pose, output_pose, transform);
+    return true;
+  } catch (const tf2::TransformException & e) {
+    RCLCPP_ERROR(this->node_logging_if_->get_logger(), "TF transform failed: %s", e.what());
+    return false;
+  }
+}
+
+bool CommandQueue::validateIK(const geometry_msgs::msg::PoseStamped & pose)
+{
+  geometry_msgs::msg::PoseStamped tf_pose;
+  if (!transformPoseToOrigin(pose, tf_pose)) {
+    RCLCPP_ERROR(this->node_logging_if_->get_logger(), "Failed to transform pose in validateI.");
+    return false;
+  }
+
   std::vector<double> tool_vec = {
-    pose.position.x,
-    pose.position.y,
-    pose.position.z,
-    tf2::getYaw(pose.orientation)
+    tf_pose.pose.position.x,
+    tf_pose.pose.position.y,
+    tf_pose.pose.position.z,
+    tf2::getYaw(tf_pose.pose.orientation)
   };
 
   try {
@@ -383,11 +430,11 @@ bool CommandQueue::validateTarget(const std::vector<mg400_msgs::msg::Command> & 
   for (const auto & command : commands) {
     switch (command.command_type) {
       case mg400_msgs::msg::Command::CT_MOV_J:
-        if (!validateIK(command.mov_j_params.pose.pose)) {return false;}
+        if (!validateIK(command.mov_j_params.pose)) {return false;}
         break;
 
       case mg400_msgs::msg::Command::CT_MOV_L:
-        if (!validateIK(command.mov_l_params.pose.pose)) {return false;}
+        if (!validateIK(command.mov_l_params.pose)) {return false;}
         break;
 
       case mg400_msgs::msg::Command::CT_JOINT_MOV_J:
@@ -395,11 +442,11 @@ bool CommandQueue::validateTarget(const std::vector<mg400_msgs::msg::Command> & 
         break;
 
       case mg400_msgs::msg::Command::CT_MOV_JIO:
-        if (!validateIK(command.mov_jio_params.pose.pose)) {return false;}
+        if (!validateIK(command.mov_jio_params.pose)) {return false;}
         break;
 
       case mg400_msgs::msg::Command::CT_MOV_LIO:
-        if (!validateIK(command.mov_lio_params.pose.pose)) {return false;}
+        if (!validateIK(command.mov_lio_params.pose)) {return false;}
         break;
 
       default:

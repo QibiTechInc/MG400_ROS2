@@ -78,9 +78,13 @@ private:
   void sendCommand(const std::vector<mg400_msgs::msg::Command> &);
 
   // functions to validate each target
-  bool validateIK(const geometry_msgs::msg::Pose &);
+  bool validateIK(const geometry_msgs::msg::PoseStamped &);
   bool validateAngles(const std::array<double, 4> &);
   bool validateTarget(const std::vector<mg400_msgs::msg::Command> &);
+
+  // utility functions
+  bool transformPoseToOrigin(
+    const geometry_msgs::msg::PoseStamped &, geometry_msgs::msg::PoseStamped &);
 };
 }  // namespace mg400_plugin
 #endif
