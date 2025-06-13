@@ -19,7 +19,7 @@
     "editor.defaultFormatter": "redhat.vscode-xml",
   },
   "[python]": {
-    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.defaultFormatter": "charliermarsh.ruff",
     "editor.formatOnSave": true
   },
   "uncrustify.configPath.linux": ".vscode/uncrustify.cfg",
