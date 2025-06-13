@@ -15,8 +15,8 @@
 # limitations under the License.
 
 from pathlib import Path
-from typing import List
 from typing import Dict
+from typing import List
 from typing import Tuple
 
 from ament_index_python.packages import get_package_share_path
@@ -35,60 +35,60 @@ def load_robot_description(xacro_filepath: Path, xacro_options: List[Tuple] = No
     if xacro_options is None:
         xacro_options = []
 
-    if "xacro" in str(xacro_filepath):
+    if 'xacro' in str(xacro_filepath):
         params = []
         if xacro_options:
             for xacro_option in xacro_options:
-                params.append(f" {xacro_option[0]}:=")
+                params.append(f' {xacro_option[0]}:=')
                 params.append(xacro_option[1])
         command = [
-            PathJoinSubstitution([FindExecutable(name="xacro")]),
-            " ",
+            PathJoinSubstitution([FindExecutable(name='xacro')]),
+            ' ',
             str(xacro_filepath),
         ]
         robot_description_content = Command(command + params)
     else:
         try:
-            with open(str(xacro_filepath), "r", encoding="utf-8") as file:
+            with open(str(xacro_filepath), 'r', encoding='utf-8') as file:
                 robot_description_content = file.read()
         except EnvironmentError:
             exit(1)
-    return {"robot_description": robot_description_content}
+    return {'robot_description': robot_description_content}
 
 
 def generate_launch_description():
     """Launch robot state publisher."""
     # Declare launch arguments
     ns_arg = DeclareLaunchArgument(
-        "namespace",
-        default_value=TextSubstitution(text=""),
-        description="Set the robot resource namespace.",
+        'namespace',
+        default_value=TextSubstitution(text=''),
+        description='Set the robot resource namespace.',
     )
     workspace_visible_arg = DeclareLaunchArgument(
-        "workspace_visible",
-        default_value=TextSubstitution(text="False"),
-        description="true : MG400 workspace is visible in rviz",
+        'workspace_visible',
+        default_value=TextSubstitution(text='False'),
+        description='true : MG400 workspace is visible in rviz',
     )
 
     # Set launch configuration
-    ns = LaunchConfiguration("namespace")
-    workspace_visible = LaunchConfiguration("workspace_visible")
+    ns = LaunchConfiguration('namespace')
+    workspace_visible = LaunchConfiguration('workspace_visible')
 
     # Load URDF using xacro
-    xacro_filepath_ = get_package_share_path("mg400_description") / "urdf" / "mg400.urdf.xacro"
+    xacro_filepath_ = get_package_share_path('mg400_description') / 'urdf' / 'mg400.urdf.xacro'
     robot_description = load_robot_description(
         xacro_filepath=xacro_filepath_,
         xacro_options=[
-            ("workspace_visible", workspace_visible),
+            ('workspace_visible', workspace_visible),
         ],
     )
 
     # Create node
     rsp_node = Node(
-        package="robot_state_publisher",
-        executable="robot_state_publisher",
+        package='robot_state_publisher',
+        executable='robot_state_publisher',
         namespace=ns,
-        output="log",
+        output='log',
         parameters=[robot_description],
     )
 

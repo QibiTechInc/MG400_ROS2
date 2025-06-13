@@ -28,41 +28,41 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     """Launch rviz display."""
-    this_package_path = FindPackageShare("mg400_bringup")
+    this_package_path = FindPackageShare('mg400_bringup')
 
     # Declare launch arguments
     arg_workspace_visible = DeclareLaunchArgument(
-        "workspace_visible",
-        default_value=TextSubstitution(text="False"),
-        description="true : MG400 workspace is visible in rviz",
+        'workspace_visible',
+        default_value=TextSubstitution(text='False'),
+        description='true : MG400 workspace is visible in rviz',
     )
 
     # Set launch configuration
-    workspace_visible = LaunchConfiguration("workspace_visible", default="False")
+    workspace_visible = LaunchConfiguration('workspace_visible', default='False')
 
     # Create nodes
     rsp_node = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            [PathJoinSubstitution([this_package_path, "launch", "rsp.launch.py"])]
+            [PathJoinSubstitution([this_package_path, 'launch', 'rsp.launch.py'])]
         ),
-        launch_arguments=[("workspace_visible", workspace_visible)],
+        launch_arguments=[('workspace_visible', workspace_visible)],
     )
 
     jsp_node = Node(
-        package="mg400_node",
-        executable="joint_state_publisher_gui",
-        name="joint_state_publisher_gui",
+        package='mg400_node',
+        executable='joint_state_publisher_gui',
+        name='joint_state_publisher_gui',
         on_exit=Shutdown(),
     )
 
     rviz_node = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            [PathJoinSubstitution([this_package_path, "launch", "rviz.launch.py"])]
+            [PathJoinSubstitution([this_package_path, 'launch', 'rviz.launch.py'])]
         ),
         launch_arguments=[
-            ("package_name", "mg400_bringup"),
-            ("config_dir", "rviz"),
-            ("rviz_config", "display.rviz"),
+            ('package_name', 'mg400_bringup'),
+            ('config_dir', 'rviz'),
+            ('rviz_config', 'display.rviz'),
         ],
     )
 

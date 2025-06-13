@@ -20,78 +20,78 @@ from launch.actions import IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
-from launch.substitutions import TextSubstitution
 from launch.substitutions import PathJoinSubstitution
+from launch.substitutions import TextSubstitution
 from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
     """Launch rviz display."""
-    this_package_path = FindPackageShare("mg400_bringup")
+    this_package_path = FindPackageShare('mg400_bringup')
 
     # Declare launch arguments
     ns_arg = DeclareLaunchArgument(
-        "namespace",
-        default_value=TextSubstitution(text="mg400"),
-        description="Set the robot resource namespace.",
+        'namespace',
+        default_value=TextSubstitution(text='mg400'),
+        description='Set the robot resource namespace.',
     )
 
     joy_arg = DeclareLaunchArgument(
-        "joy", default_value="false", description="Determines if joy.launch is called."
+        'joy', default_value='false', description='Determines if joy.launch is called.'
     )
 
     ip_address_arg = DeclareLaunchArgument(
-        "ip_address",
-        default_value=TextSubstitution(text="192.168.1.6"),
-        description="Set the ip address to connect",
+        'ip_address',
+        default_value=TextSubstitution(text='192.168.1.6'),
+        description='Set the ip address to connect',
     )
 
     workspace_visible_arg = DeclareLaunchArgument(
-        "workspace_visible",
-        default_value=TextSubstitution(text="False"),
-        description="true : MG400 workspace is visible in rviz",
+        'workspace_visible',
+        default_value=TextSubstitution(text='False'),
+        description='true : MG400 workspace is visible in rviz',
     )
 
     # Set launch configurations
-    ns = LaunchConfiguration("namespace")
-    joy = LaunchConfiguration("joy")
-    ip_address = LaunchConfiguration("ip_address")
-    workspace_visible = LaunchConfiguration("workspace_visible")
+    ns = LaunchConfiguration('namespace')
+    joy = LaunchConfiguration('joy')
+    ip_address = LaunchConfiguration('ip_address')
+    workspace_visible = LaunchConfiguration('workspace_visible')
 
     # Create nodes
     mg400_node = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            [PathJoinSubstitution([this_package_path, "launch", "mg400.launch.py"])]
+            [PathJoinSubstitution([this_package_path, 'launch', 'mg400.launch.py'])]
         ),
         launch_arguments=[
-            ("namespace", ns),
-            ("ip_address", ip_address),
+            ('namespace', ns),
+            ('ip_address', ip_address),
         ],
     )
 
     joy_node = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            [PathJoinSubstitution([this_package_path, "launch", "joy.launch.py"])]
+            [PathJoinSubstitution([this_package_path, 'launch', 'joy.launch.py'])]
         ),
         condition=IfCondition(joy),
-        launch_arguments=[("namespace", ns)],
+        launch_arguments=[('namespace', ns)],
     )
 
     rsp_node = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            [PathJoinSubstitution([this_package_path, "launch", "rsp.launch.py"])]
+            [PathJoinSubstitution([this_package_path, 'launch', 'rsp.launch.py'])]
         ),
-        launch_arguments=[("namespace", ns), ("workspace_visible", workspace_visible)],
+        launch_arguments=[('namespace', ns), ('workspace_visible', workspace_visible)],
     )
 
     rviz_node = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            [PathJoinSubstitution([this_package_path, "launch", "rviz.launch.py"])]
+            [PathJoinSubstitution([this_package_path, 'launch', 'rviz.launch.py'])]
         ),
         launch_arguments=[
-            ("package_name", "mg400_bringup"),
-            ("config_dir", "rviz"),
-            ("rviz_config", "mg400.rviz"),
+            ('package_name', 'mg400_bringup'),
+            ('config_dir', 'rviz'),
+            ('rviz_config', 'mg400.rviz'),
         ],
     )
 

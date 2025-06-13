@@ -25,50 +25,50 @@ def generate_launch_description():
     """Launch RViz with configurable config file."""
     # Declare launch arguments
     rviz_config_arg = DeclareLaunchArgument(
-        "rviz_config",
-        default_value="mg400.rviz",
-        description="RViz configuration file name (without path)",
+        'rviz_config',
+        default_value='mg400.rviz',
+        description='RViz configuration file name (without path)',
     )
 
     package_name_arg = DeclareLaunchArgument(
-        "package_name",
-        default_value="mg400_bringup",
-        description="Package name containing the RViz config",
+        'package_name',
+        default_value='mg400_bringup',
+        description='Package name containing the RViz config',
     )
 
     config_dir_arg = DeclareLaunchArgument(
-        "config_dir",
-        default_value="rviz",
-        description="Directory name within package containing RViz configs",
+        'config_dir',
+        default_value='rviz',
+        description='Directory name within package containing RViz configs',
     )
 
     log_level_arg = DeclareLaunchArgument(
-        "log_level",
-        default_value="error",
-        description="Log level for RViz (debug, info, warn, error, fatal)",
+        'log_level',
+        default_value='error',
+        description='Log level for RViz (debug, info, warn, error, fatal)',
     )
 
     # Generate rviz config path
     rviz_config_path = PathJoinSubstitution(
         [
-            FindPackageShare(LaunchConfiguration("package_name")),
-            LaunchConfiguration("config_dir"),
-            LaunchConfiguration("rviz_config"),
+            FindPackageShare(LaunchConfiguration('package_name')),
+            LaunchConfiguration('config_dir'),
+            LaunchConfiguration('rviz_config'),
         ]
     )
 
     # Create nodes
     rviz_node = Node(
-        package="rviz2",
-        executable="rviz2",
-        name="rviz2",
-        output="log",
+        package='rviz2',
+        executable='rviz2',
+        name='rviz2',
+        output='log',
         arguments=[
-            "-d",
+            '-d',
             rviz_config_path,
-            "--ros-args",
-            "--log-level",
-            LaunchConfiguration("log_level"),
+            '--ros-args',
+            '--log-level',
+            LaunchConfiguration('log_level'),
         ],
     )
 

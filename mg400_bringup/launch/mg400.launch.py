@@ -25,25 +25,25 @@ from launch_ros.actions import Node
 def generate_launch_description():
     """Launch rviz display."""
     # DeclareLaunchArguments
-    ns_arg = DeclareLaunchArgument("namespace", default_value=TextSubstitution(text=""))
+    ns_arg = DeclareLaunchArgument('namespace', default_value=TextSubstitution(text=''))
 
     ip_address_arg = DeclareLaunchArgument(
-        "ip_address", default_value=TextSubstitution(text="192.168.1.6")
+        'ip_address', default_value=TextSubstitution(text='192.168.1.6')
     )
 
     # Set launch configurations
-    ns = LaunchConfiguration("namespace")
-    ip_address = LaunchConfiguration("ip_address")
+    ns = LaunchConfiguration('namespace')
+    ip_address = LaunchConfiguration('ip_address')
 
     # Create nodes
     mg400_node = Node(
-        package="mg400_node",
-        executable="mg400_node_exec",
-        name="mg400_node",
+        package='mg400_node',
+        executable='mg400_node_exec',
+        name='mg400_node',
         namespace=ns,
         parameters=[
             {
-                "ip_address": ip_address,
+                'ip_address': ip_address,
             }
         ],
         on_exit=Shutdown(),
