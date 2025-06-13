@@ -44,7 +44,7 @@ protected:
   MockTcpInterface mock;
   virtual void SetUp()
   {
-    using namespace std::chrono_literals;
+    using namespace std::chrono_literals; // NOLINT
     this->commander =
       std::make_unique<mg400_interface::DashboardCommander>(
       &this->mock, 1ms);
