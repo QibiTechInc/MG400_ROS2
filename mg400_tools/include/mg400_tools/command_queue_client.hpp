@@ -55,9 +55,10 @@ private:
   using CommandQueue = mg400_msgs::action::CommandQueue;
   using GoalHandleCommandQueue = rclcpp_action::ClientGoalHandle<CommandQueue>;
 
+  std::string param_name_command_config_path_;
+
   void onInit();
   bool waitForActionServer();
-  std::string getConfigPath();
   YAML::Node loadConfig();
   void sendGoal();
   void sendGoalWithCallbacks(const CommandQueue::Goal & goal_msg);

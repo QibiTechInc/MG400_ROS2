@@ -20,6 +20,12 @@ namespace mg400_tools
 CommandQueueClient::CommandQueueClient(const rclcpp::NodeOptions options)
 : rclcpp::Node("command_queue_client", options)
 {
+  this->param_name_command_config_path_ = "command_config_path";
+  auto default_command_config_path =
+    ament_index_cpp::get_package_share_directory("mg400_tools") + "/config/commands.yaml";
+  this->declare_parameter<std::string>(
+    this->param_name_command_config_path_, default_command_config_path);
+
   using namespace std::chrono_literals;   // NOLINT;
   std::string action_name = std::string(this->get_namespace()) + "/command_queue";
   RCLCPP_INFO(this->get_logger(), "Action server: %s", action_name.c_str());
@@ -48,22 +54,12 @@ bool CommandQueueClient::waitForActionServer()
   return true;
 }
 
-std::string CommandQueueClient::getConfigPath()
-{
-  // Search commands.yaml in home directory
-  std::string home_config = std::getenv("HOME") + std::string("/.config/mg400_tools/commands.yaml");
-  if (std::filesystem::exists(home_config)) {
-    return home_config;
-  }
-
-  // Search commands.yaml in share directory
-  return ament_index_cpp::get_package_share_directory("mg400_tools") + "/config/commands.yaml";
-}
-
 YAML::Node CommandQueueClient::loadConfig()
 {
-  std::string yaml_path = this->getConfigPath();
-  return YAML::LoadFile(yaml_path);
+  std::string command_config_path =
+    this->get_parameter(this->param_name_command_config_path_).as_string();
+  RCLCPP_INFO(this->get_logger(), "Loaded command config: %s", command_config_path.c_str());
+  return YAML::LoadFile(command_config_path);
 }
 
 void CommandQueueClient::sendGoal()
