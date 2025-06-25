@@ -23,6 +23,8 @@ The following API interface plugin will be loaded by default
   - `MoveJog`
   - `MovJ`
   - `MovL`
+  - `JointMovJ`
+  - `CommandQueue` (detailed [here](../doc/ComanndQueue.md))
 
 ## Joint State Publisher Gui
 

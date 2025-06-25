@@ -1,0 +1,468 @@
+// Copyright 2025 HarvestX Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "mg400_plugin/motion_api/command_queue.hpp"
+
+namespace mg400_plugin
+{
+
+void CommandQueue::configure(
+  const mg400_interface::MotionCommander::SharedPtr commander,
+  const rclcpp::node_interfaces::NodeBaseInterface::SharedPtr node_base_if,
+  const rclcpp::node_interfaces::NodeClockInterface::SharedPtr node_clock_if,
+  const rclcpp::node_interfaces::NodeLoggingInterface::SharedPtr node_logging_if,
+  const rclcpp::node_interfaces::NodeServicesInterface::SharedPtr node_services_if,
+  const rclcpp::node_interfaces::NodeWaitablesInterface::SharedPtr node_waitables_if,
+  const mg400_interface::MG400Interface::SharedPtr mg400_if)
+{
+  if (!this->configure_base(
+      commander, node_base_if, node_clock_if,
+      node_logging_if, node_services_if, node_waitables_if, mg400_if))
+  {
+    return;
+  }
+
+  // setup for using tf
+  this->tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node_clock_if_->get_clock());
+  this->tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*this->tf_buffer_);
+
+  using namespace std::placeholders;  // NOLINT
+
+  this->action_server_ =
+    rclcpp_action::create_server<ActionT>(
+    this->node_base_if_,
+    this->node_clock_if_,
+    this->node_logging_if_,
+    this->node_waitable_if_,
+    "command_queue",
+    std::bind(&CommandQueue::handle_goal, this, _1, _2),
+    std::bind(&CommandQueue::handle_cancel, this, _1),
+    std::bind(&CommandQueue::handle_accepted, this, _1),
+    rcl_action_server_get_default_options(),
+    this->node_base_if_->get_default_callback_group());
+}
+
+rclcpp_action::GoalResponse CommandQueue::handle_goal(
+  const rclcpp_action::GoalUUID & /*uuid*/, ActionT::Goal::ConstSharedPtr goal)
+{
+  if (!this->mg400_interface_->ok()) {
+    RCLCPP_ERROR(
+      this->node_logging_if_->get_logger(), "MG400 is not connected");
+    return rclcpp_action::GoalResponse::REJECT;
+  }
+
+  using RobotMode = mg400_msgs::msg::RobotMode;
+  if (!this->mg400_interface_->realtime_tcp_interface->isRobotMode(RobotMode::ENABLE)) {
+    uint64_t mode;
+    this->mg400_interface_->realtime_tcp_interface->getRobotMode(mode);
+    RCLCPP_ERROR(
+      this->node_logging_if_->get_logger(), "Robot mode is not enabled: mode is %ld", mode);
+    return rclcpp_action::GoalResponse::REJECT;
+  }
+
+  // check if the requested goal is inside the mg400 range
+  if (!this->validateTarget(goal->commands)) {
+    RCLCPP_ERROR(this->node_logging_if_->get_logger(), "The targets are outside of the range.");
+    return rclcpp_action::GoalResponse::REJECT;
+  }
+
+  return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+}
+
+rclcpp_action::CancelResponse CommandQueue::handle_cancel(
+  const std::shared_ptr<GoalHandle>)
+{
+  RCLCPP_INFO(
+    this->node_logging_if_->get_logger(), "Received request to cancel goal");
+  // TODO(anyone): Should stop movJ
+  return rclcpp_action::CancelResponse::ACCEPT;
+}
+
+void CommandQueue::handle_accepted(
+  const std::shared_ptr<GoalHandle> goal_handle)
+{
+  using namespace std::placeholders;  // NOLINT
+  std::thread{std::bind(&CommandQueue::execute, this, _1), goal_handle}.detach();
+}
+
+
+void CommandQueue::execute(const std::shared_ptr<GoalHandle> goal_handle)
+{
+  rclcpp::Rate control_freq(10);  // Hz
+
+  const auto & goal = goal_handle->get_goal();
+
+  auto feedback = std::make_shared<ActionT::Feedback>();
+  auto result = std::make_shared<ActionT::Result>();
+  result->result = false;
+
+  // send MovJ command
+  try {
+    this->sendCommand(goal->commands);
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(this->node_logging_if_->get_logger(), e.what());
+    return;
+  }
+
+  const auto update_pose_and_angles =
+    [&](geometry_msgs::msg::PoseStamped & pose, std::array<double, 4> & angles) -> void
+    {
+      pose.header.stamp = this->node_clock_if_->get_clock()->now();
+      pose.header.frame_id =
+        this->mg400_interface_->realtime_tcp_interface->frame_id_prefix + "mg400_origin_link";
+      this->mg400_interface_->realtime_tcp_interface->getCurrentEndPose(pose.pose);
+      this->mg400_interface_->realtime_tcp_interface->getCurrentJointStates(angles);
+    };
+
+
+  using RobotMode = mg400_msgs::msg::RobotMode;
+  using namespace std::chrono_literals;   // NOLINT
+  // TODO(anyone): Should calculate timeout with expectation goal time
+  const auto timeout = rclcpp::Duration(60s);
+  const auto start = this->node_clock_if_->get_clock()->now();
+  update_pose_and_angles(feedback->current_pose, feedback->current_angles);
+
+  while (!this->mg400_interface_->realtime_tcp_interface->isRobotMode(RobotMode::RUNNING)) {
+    if (this->node_clock_if_->get_clock()->now() - start > rclcpp::Duration(5s)) {
+      RCLCPP_ERROR(
+        this->node_logging_if_->get_logger(),
+        "execution timeout: Robot mode did not become RUNNING.");
+      try {
+        const std::array<std::vector<int>,
+          6> error_id = this->mg400_interface_->dashboard_commander->getErrorId();
+        this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(
+          error_id,
+          result->error_id);
+      } catch (const std::exception & e) {
+        RCLCPP_WARN(this->node_logging_if_->get_logger(), "Failed to get Error ID: %s", e.what());
+      }
+      goal_handle->abort(result);
+      return;
+    }
+
+    if (this->mg400_interface_->realtime_tcp_interface->isRobotMode(RobotMode::ERROR)) {
+      RCLCPP_ERROR(
+        this->node_logging_if_->get_logger(), "Robot Mode Error while checking becoming RUNNING");
+      try {
+        const std::array<std::vector<int>, 6> error_id =
+          this->mg400_interface_->dashboard_commander->getErrorId();
+        this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(
+          error_id, result->error_id);
+      } catch (const std::exception & e) {
+        RCLCPP_WARN(this->node_logging_if_->get_logger(), "Failed to get Error ID: %s", e.what());
+      }
+      goal_handle->abort(result);
+      return;
+    }
+
+    control_freq.sleep();
+  }
+
+  while (!this->mg400_interface_->realtime_tcp_interface->isRobotMode(RobotMode::ENABLE)) {
+    if (!this->mg400_interface_->ok()) {
+      RCLCPP_ERROR(this->node_logging_if_->get_logger(), "MG400 Connection Error");
+      try {
+        const std::array<std::vector<int>, 6> error_id =
+          this->mg400_interface_->dashboard_commander->getErrorId();
+        this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(
+          error_id, result->error_id);
+      } catch (const std::exception & e) {
+        RCLCPP_WARN(this->node_logging_if_->get_logger(), "Failed to get Error ID: %s", e.what());
+      }
+      goal_handle->abort(result);
+      return;
+    }
+
+    if (this->mg400_interface_->realtime_tcp_interface->isRobotMode(RobotMode::ERROR)) {
+      RCLCPP_ERROR(this->node_logging_if_->get_logger(), "Robot Mode Error while checking goal");
+      try {
+        const std::array<std::vector<int>, 6> error_id =
+          this->mg400_interface_->dashboard_commander->getErrorId();
+        this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(
+          error_id, result->error_id);
+      } catch (const std::exception & e) {
+        RCLCPP_WARN(this->node_logging_if_->get_logger(), "Failed to get Error ID: %s", e.what());
+      }
+      goal_handle->abort(result);
+      return;
+    }
+
+    if (this->node_clock_if_->get_clock()->now() - start > timeout) {
+      RCLCPP_ERROR(this->node_logging_if_->get_logger(), "execution timeout");
+      try {
+        const std::array<std::vector<int>, 6> error_id =
+          this->mg400_interface_->dashboard_commander->getErrorId();
+        this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(
+          error_id, result->error_id);
+      } catch (const std::exception & e) {
+        RCLCPP_WARN(this->node_logging_if_->get_logger(), "Failed to get Error ID: %s", e.what());
+      }
+      goal_handle->abort(result);
+      return;
+    }
+
+    update_pose_and_angles(feedback->current_pose, feedback->current_angles);
+    goal_handle->publish_feedback(feedback);
+    control_freq.sleep();
+  }
+
+  RCLCPP_INFO(this->node_logging_if_->get_logger(), "Execution succeeded");
+  result->result = true;
+  goal_handle->succeed(result);
+}
+
+void CommandQueue::sendMovJ(const mg400_msgs::msg::MovJ & params)
+{
+  geometry_msgs::msg::PoseStamped tf_pose;
+  if (!transformPoseToOrigin(params.pose, tf_pose)) {
+    RCLCPP_ERROR(this->node_logging_if_->get_logger(), "Failed to transform pose in sendMovJ.");
+    return;
+  }
+
+  int8_t speed_j = plugin_utils::clampSpeedJ(
+    params.set_speed_j, params.speed_j, this->node_logging_if_->get_logger());
+  int8_t acc_j = plugin_utils::clampAccJ(
+    params.set_acc_j, params.acc_j, this->node_logging_if_->get_logger());
+  int8_t cp = plugin_utils::clampCP(
+    params.set_cp, params.cp, this->node_logging_if_->get_logger());
+
+  this->commander_->movJ(
+    tf_pose.pose.position.x,
+    tf_pose.pose.position.y,
+    tf_pose.pose.position.z,
+    tf2::getYaw(tf_pose.pose.orientation),
+    speed_j, acc_j, cp
+  );
+}
+
+void CommandQueue::sendMovL(const mg400_msgs::msg::MovL & params)
+{
+  geometry_msgs::msg::PoseStamped tf_pose;
+  if (!transformPoseToOrigin(params.pose, tf_pose)) {
+    RCLCPP_ERROR(this->node_logging_if_->get_logger(), "Failed to transform pose in sendMovL.");
+    return;
+  }
+
+  int8_t speed_l = plugin_utils::clampSpeedL(
+    params.set_speed_l, params.speed_l, this->node_logging_if_->get_logger());
+  int8_t acc_l = plugin_utils::clampAccL(
+    params.set_acc_l, params.acc_l, this->node_logging_if_->get_logger());
+  int8_t cp = plugin_utils::clampCP(
+    params.set_cp, params.cp, this->node_logging_if_->get_logger());
+
+  this->commander_->movL(
+    tf_pose.pose.position.x,
+    tf_pose.pose.position.y,
+    tf_pose.pose.position.z,
+    tf2::getYaw(tf_pose.pose.orientation),
+    speed_l, acc_l, cp);
+}
+
+void CommandQueue::sendJointMovJ(const mg400_msgs::msg::JointMovJ & params)
+{
+  int8_t speed_j = plugin_utils::clampSpeedJ(
+    params.set_speed_j, params.speed_j, this->node_logging_if_->get_logger());
+  int8_t acc_j = plugin_utils::clampAccJ(
+    params.set_acc_j, params.acc_j, this->node_logging_if_->get_logger());
+  int8_t cp = plugin_utils::clampCP(
+    params.set_cp, params.cp, this->node_logging_if_->get_logger());
+
+  this->commander_->jointMovJ(
+    params.joint_angles[0],
+    params.joint_angles[1],
+    params.joint_angles[2],
+    params.joint_angles[3],
+    speed_j, acc_j, cp);
+}
+
+void CommandQueue::sendMovJIO(const mg400_msgs::msg::MovJIO & params)
+{
+  geometry_msgs::msg::PoseStamped tf_pose;
+  if (!transformPoseToOrigin(params.pose, tf_pose)) {
+    RCLCPP_ERROR(this->node_logging_if_->get_logger(), "Failed to transform pose in sendMovJIO.");
+    return;
+  }
+
+  int8_t speed_j = plugin_utils::clampSpeedJ(
+    params.set_speed_j, params.speed_j, this->node_logging_if_->get_logger());
+  int8_t acc_j = plugin_utils::clampAccJ(
+    params.set_acc_j, params.acc_j, this->node_logging_if_->get_logger());
+
+  int8_t cp = -1;  // This means the cp option is always disabled.
+  // This is due to a bug in the MG400 TCP/IP API.
+  // According to the MG400 manual, MovLIO and MovJIO accepts the cp option,
+  // but MG400 firmware version 1.6 does not support it.
+
+  this->commander_->movJIO(
+    tf_pose.pose.position.x,
+    tf_pose.pose.position.y,
+    tf_pose.pose.position.z,
+    tf2::getYaw(tf_pose.pose.orientation),
+    params.mode,
+    params.distance,
+    params.index,
+    params.status,
+    speed_j, acc_j, cp);
+}
+
+void CommandQueue::sendMovLIO(const mg400_msgs::msg::MovLIO & params)
+{
+  geometry_msgs::msg::PoseStamped tf_pose;
+  if (!transformPoseToOrigin(params.pose, tf_pose)) {
+    RCLCPP_ERROR(this->node_logging_if_->get_logger(), "Failed to transform pose in sendMovLIO.");
+    return;
+  }
+
+  int8_t speed_l = plugin_utils::clampSpeedL(
+    params.set_speed_l, params.speed_l, this->node_logging_if_->get_logger());
+  int8_t acc_l = plugin_utils::clampAccL(
+    params.set_acc_l, params.acc_l, this->node_logging_if_->get_logger());
+
+  int8_t cp = -1;  // This means the cp option is always disabled.
+  // This is due to a bug in the MG400 TCP/IP API.
+  // According to the MG400 manual, MovLIO and MovJIO accepts the cp option,
+  // but MG400 firmware version 1.6 does not support it.
+
+  this->commander_->movLIO(
+    tf_pose.pose.position.x,
+    tf_pose.pose.position.y,
+    tf_pose.pose.position.z,
+    tf2::getYaw(tf_pose.pose.orientation),
+    params.mode,
+    params.distance,
+    params.index,
+    params.status,
+    speed_l, acc_l, cp);
+}
+
+void CommandQueue::sendCommand(const std::vector<mg400_msgs::msg::Command> & commands)
+{
+  for (const auto & command : commands) {
+    switch (command.command_type) {
+      case mg400_msgs::msg::Command::CT_MOV_J:
+        sendMovJ(command.mov_j_params);
+        break;
+
+      case mg400_msgs::msg::Command::CT_MOV_L:
+        sendMovL(command.mov_l_params);
+        break;
+
+      case mg400_msgs::msg::Command::CT_JOINT_MOV_J:
+        sendJointMovJ(command.joint_mov_j_params);
+        break;
+
+      case mg400_msgs::msg::Command::CT_MOV_JIO:
+        sendMovJIO(command.mov_jio_params);
+        break;
+
+      case mg400_msgs::msg::Command::CT_MOV_LIO:
+        sendMovLIO(command.mov_lio_params);
+        break;
+
+      default:
+        RCLCPP_WARN(
+          this->node_logging_if_->get_logger(),
+          "Unknown command type: %d", command.command_type);
+        break;
+    }
+  }
+}
+
+bool CommandQueue::transformPoseToOrigin(
+  const geometry_msgs::msg::PoseStamped & input_pose,
+  geometry_msgs::msg::PoseStamped & output_pose)
+{
+  try {
+    auto transform = this->tf_buffer_->lookupTransform(
+      this->mg400_interface_->realtime_tcp_interface->frame_id_prefix + "mg400_origin_link",
+      input_pose.header.frame_id,
+      rclcpp::Time(0)
+    );
+    tf2::doTransform(input_pose, output_pose, transform);
+    return true;
+  } catch (const tf2::TransformException & e) {
+    RCLCPP_ERROR(this->node_logging_if_->get_logger(), "TF transform failed: %s", e.what());
+    return false;
+  }
+}
+
+bool CommandQueue::validateIK(const geometry_msgs::msg::PoseStamped & pose)
+{
+  geometry_msgs::msg::PoseStamped tf_pose;
+  if (!transformPoseToOrigin(pose, tf_pose)) {
+    RCLCPP_ERROR(this->node_logging_if_->get_logger(), "Failed to transform pose in validateI.");
+    return false;
+  }
+
+  std::vector<double> tool_vec = {
+    tf_pose.pose.position.x,
+    tf_pose.pose.position.y,
+    tf_pose.pose.position.z,
+    tf2::getYaw(tf_pose.pose.orientation)
+  };
+
+  try {
+    mg400_ik_util_.InverseKinematics(tool_vec);
+    return true;
+  } catch (const std::exception & e) {
+    return false;
+  }
+}
+
+bool CommandQueue::validateAngles(const std::array<double, 4> & angles)
+{
+  return mg400_ik_util_.InMG400Range({angles[0], angles[1], angles[2], angles[3]});
+}
+
+bool CommandQueue::validateTarget(const std::vector<mg400_msgs::msg::Command> & commands)
+{
+  for (const auto & command : commands) {
+    switch (command.command_type) {
+      case mg400_msgs::msg::Command::CT_MOV_J:
+        if (!validateIK(command.mov_j_params.pose)) {return false;}
+        break;
+
+      case mg400_msgs::msg::Command::CT_MOV_L:
+        if (!validateIK(command.mov_l_params.pose)) {return false;}
+        break;
+
+      case mg400_msgs::msg::Command::CT_JOINT_MOV_J:
+        if (!validateAngles(command.joint_mov_j_params.joint_angles)) {return false;}
+        break;
+
+      case mg400_msgs::msg::Command::CT_MOV_JIO:
+        if (!validateIK(command.mov_jio_params.pose)) {return false;}
+        break;
+
+      case mg400_msgs::msg::Command::CT_MOV_LIO:
+        if (!validateIK(command.mov_lio_params.pose)) {return false;}
+        break;
+
+      default:
+        RCLCPP_WARN(
+          node_logging_if_->get_logger(), "Unknown command type: %d",
+          command.command_type);
+        break;
+    }
+  }
+
+  return true;
+}
+
+}  // namespace mg400_plugin
+
+#include <pluginlib/class_list_macros.hpp>
+PLUGINLIB_EXPORT_CLASS(
+  mg400_plugin::CommandQueue,
+  mg400_plugin_base::MotionApiPluginBase)
