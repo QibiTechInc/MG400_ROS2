@@ -86,7 +86,7 @@ void DashboardTcpInterface::disConnect()
 
 std::string DashboardTcpInterface::recvResponse()
 {
-  char buf[100];
+  char buf[100] = {0};
   this->tcp_socket_->recv(buf, sizeof(buf), 500ms);
   RCLCPP_DEBUG(this->getLogger(), "recv: %s", std::string(buf).c_str());
   return std::string(buf);
