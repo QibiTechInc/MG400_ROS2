@@ -139,8 +139,11 @@ void CommandQueue::execute(const std::shared_ptr<GoalHandle> goal_handle)
         this->node_logging_if_->get_logger(),
         "execution timeout: Robot mode did not become RUNNING.");
       try {
-        const std::array<std::vector<int>,
-          6> error_id = this->mg400_interface_->dashboard_commander->getErrorId();
+        const std::array<std::vector<int>, 6>
+        error_id = this->mg400_interface_->dashboard_commander->getErrorId();
+        for (auto id : error_id[0]) {
+          RCLCPP_ERROR(this->node_logging_if_->get_logger(), "error_id: %d", id);
+        }
         this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(
           error_id,
           result->error_id);
@@ -169,47 +172,61 @@ void CommandQueue::execute(const std::shared_ptr<GoalHandle> goal_handle)
     control_freq.sleep();
   }
 
-  while (!this->mg400_interface_->realtime_tcp_interface->isRobotMode(RobotMode::ENABLE)) {
-    if (!this->mg400_interface_->ok()) {
-      RCLCPP_ERROR(this->node_logging_if_->get_logger(), "MG400 Connection Error");
-      try {
-        const std::array<std::vector<int>, 6> error_id =
-          this->mg400_interface_->dashboard_commander->getErrorId();
-        this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(
-          error_id, result->error_id);
-      } catch (const std::exception & e) {
-        RCLCPP_WARN(this->node_logging_if_->get_logger(), "Failed to get Error ID: %s", e.what());
-      }
-      goal_handle->abort(result);
-      return;
-    }
+  rclcpp::Time enable_start_time;
+  bool enable_mode_confirmed = false;
+  const auto enable_duration_threshold = rclcpp::Duration::from_seconds(0.3);
 
-    if (this->mg400_interface_->realtime_tcp_interface->isRobotMode(RobotMode::ERROR)) {
-      RCLCPP_ERROR(this->node_logging_if_->get_logger(), "Robot Mode Error while checking goal");
-      try {
-        const std::array<std::vector<int>, 6> error_id =
-          this->mg400_interface_->dashboard_commander->getErrorId();
-        this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(
-          error_id, result->error_id);
-      } catch (const std::exception & e) {
-        RCLCPP_WARN(this->node_logging_if_->get_logger(), "Failed to get Error ID: %s", e.what());
-      }
-      goal_handle->abort(result);
-      return;
-    }
+  while (!enable_mode_confirmed) {
+    if (!this->mg400_interface_->realtime_tcp_interface->isRobotMode(RobotMode::ENABLE)) {
+      enable_start_time = rclcpp::Time();
 
-    if (this->node_clock_if_->get_clock()->now() - start > timeout) {
-      RCLCPP_ERROR(this->node_logging_if_->get_logger(), "execution timeout");
-      try {
-        const std::array<std::vector<int>, 6> error_id =
-          this->mg400_interface_->dashboard_commander->getErrorId();
-        this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(
-          error_id, result->error_id);
-      } catch (const std::exception & e) {
-        RCLCPP_WARN(this->node_logging_if_->get_logger(), "Failed to get Error ID: %s", e.what());
+      if (!this->mg400_interface_->ok()) {
+        RCLCPP_ERROR(this->node_logging_if_->get_logger(), "MG400 Connection Error");
+        try {
+          const std::array<std::vector<int>, 6> error_id =
+            this->mg400_interface_->dashboard_commander->getErrorId();
+          this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(
+            error_id, result->error_id);
+        } catch (const std::exception & e) {
+          RCLCPP_WARN(this->node_logging_if_->get_logger(), "Failed to get Error ID: %s", e.what());
+        }
+        goal_handle->abort(result);
+        return;
       }
-      goal_handle->abort(result);
-      return;
+      if (this->mg400_interface_->realtime_tcp_interface->isRobotMode(RobotMode::ERROR)) {
+        RCLCPP_ERROR(this->node_logging_if_->get_logger(), "Robot Mode Error while checking goal");
+        try {
+          const std::array<std::vector<int>, 6> error_id =
+            this->mg400_interface_->dashboard_commander->getErrorId();
+          this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(
+            error_id, result->error_id);
+        } catch (const std::exception & e) {
+          RCLCPP_WARN(this->node_logging_if_->get_logger(), "Failed to get Error ID: %s", e.what());
+        }
+        goal_handle->abort(result);
+        return;
+      }
+      if (this->node_clock_if_->get_clock()->now() - start > timeout) {
+        RCLCPP_ERROR(this->node_logging_if_->get_logger(), "execution timeout");
+        try {
+          const std::array<std::vector<int>, 6> error_id =
+            this->mg400_interface_->dashboard_commander->getErrorId();
+          this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(
+            error_id, result->error_id);
+        } catch (const std::exception & e) {
+          RCLCPP_WARN(this->node_logging_if_->get_logger(), "Failed to get Error ID: %s", e.what());
+        }
+        goal_handle->abort(result);
+        return;
+      }
+    } else {
+      if (enable_start_time.nanoseconds() == 0) {
+        enable_start_time = this->node_clock_if_->get_clock()->now();
+      } else if (this->node_clock_if_->get_clock()->now() - enable_start_time >=
+        enable_duration_threshold)
+      {
+        enable_mode_confirmed = true;
+      }
     }
 
     update_pose_and_angles(feedback->current_pose, feedback->current_angles);
@@ -427,26 +444,66 @@ bool CommandQueue::validateAngles(const std::array<double, 4> & angles)
 
 bool CommandQueue::validateTarget(const std::vector<mg400_msgs::msg::Command> & commands)
 {
-  for (const auto & command : commands) {
+  for (size_t i = 0; i < commands.size(); ++i) {
+    const auto & command = commands[i];
     switch (command.command_type) {
       case mg400_msgs::msg::Command::CT_MOV_J:
-        if (!validateIK(command.mov_j_params.pose)) {return false;}
+        if (!validateIK(command.mov_j_params.pose)) {
+          const auto & pos = command.mov_j_params.pose.pose.position;
+          const auto & orient = command.mov_j_params.pose.pose.orientation;
+          RCLCPP_ERROR(
+            node_logging_if_->get_logger(),
+            "Command %zu (MovJ): Target pose unreachable - pos(%.3f, %.3f, %.3f), orient(%.3f, %.3f, %.3f, %.3f)",
+            i, pos.x, pos.y, pos.z, orient.x, orient.y, orient.z, orient.w);
+          return false;
+        }
         break;
 
       case mg400_msgs::msg::Command::CT_MOV_L:
-        if (!validateIK(command.mov_l_params.pose)) {return false;}
+        if (!validateIK(command.mov_l_params.pose)) {
+          const auto & pos = command.mov_l_params.pose.pose.position;
+          const auto & orient = command.mov_l_params.pose.pose.orientation;
+          RCLCPP_ERROR(
+            node_logging_if_->get_logger(),
+            "Command %zu (MovL): Target pose unreachable - pos(%.3f, %.3f, %.3f), orient(%.3f, %.3f, %.3f, %.3f)",
+            i, pos.x, pos.y, pos.z, orient.x, orient.y, orient.z, orient.w);
+          return false;
+        }
         break;
 
       case mg400_msgs::msg::Command::CT_JOINT_MOV_J:
-        if (!validateAngles(command.joint_mov_j_params.joint_angles)) {return false;}
+        if (!validateAngles(command.joint_mov_j_params.joint_angles)) {
+          const auto & angles = command.joint_mov_j_params.joint_angles;
+          RCLCPP_ERROR(
+            node_logging_if_->get_logger(),
+            "Command %zu (JointMovJ): Joint angles out of range - [%.3f, %.3f, %.3f, %.3f]",
+            i, angles[0], angles[1], angles[2], angles[3]);
+          return false;
+        }
         break;
 
       case mg400_msgs::msg::Command::CT_MOV_JIO:
-        if (!validateIK(command.mov_jio_params.pose)) {return false;}
+        if (!validateIK(command.mov_jio_params.pose)) {
+          const auto & pos = command.mov_jio_params.pose.pose.position;
+          const auto & orient = command.mov_jio_params.pose.pose.orientation;
+          RCLCPP_ERROR(
+            node_logging_if_->get_logger(),
+            "Command %zu (MovJIO): Target pose unreachable - pos(%.3f, %.3f, %.3f), orient(%.3f, %.3f, %.3f, %.3f)",
+            i, pos.x, pos.y, pos.z, orient.x, orient.y, orient.z, orient.w);
+          return false;
+        }
         break;
 
       case mg400_msgs::msg::Command::CT_MOV_LIO:
-        if (!validateIK(command.mov_lio_params.pose)) {return false;}
+        if (!validateIK(command.mov_lio_params.pose)) {
+          const auto & pos = command.mov_lio_params.pose.pose.position;
+          const auto & orient = command.mov_lio_params.pose.pose.orientation;
+          RCLCPP_ERROR(
+            node_logging_if_->get_logger(),
+            "Command %zu (MovLIO): Target pose unreachable - pos(%.3f, %.3f, %.3f), orient(%.3f, %.3f, %.3f, %.3f)",
+            i, pos.x, pos.y, pos.z, orient.x, orient.y, orient.z, orient.w);
+          return false;
+        }
         break;
 
       default:
