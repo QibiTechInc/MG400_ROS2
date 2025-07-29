@@ -444,26 +444,66 @@ bool CommandQueue::validateAngles(const std::array<double, 4> & angles)
 
 bool CommandQueue::validateTarget(const std::vector<mg400_msgs::msg::Command> & commands)
 {
-  for (const auto & command : commands) {
+  for (size_t i = 0; i < commands.size(); ++i) {
+    const auto & command = commands[i];
     switch (command.command_type) {
       case mg400_msgs::msg::Command::CT_MOV_J:
-        if (!validateIK(command.mov_j_params.pose)) {return false;}
+        if (!validateIK(command.mov_j_params.pose)) {
+          const auto & pos = command.mov_j_params.pose.pose.position;
+          const auto & orient = command.mov_j_params.pose.pose.orientation;
+          RCLCPP_ERROR(
+            node_logging_if_->get_logger(),
+            "Command %zu (MovJ): Target pose unreachable - pos(%.3f, %.3f, %.3f), orient(%.3f, %.3f, %.3f, %.3f)",
+            i, pos.x, pos.y, pos.z, orient.x, orient.y, orient.z, orient.w);
+          return false;
+        }
         break;
 
       case mg400_msgs::msg::Command::CT_MOV_L:
-        if (!validateIK(command.mov_l_params.pose)) {return false;}
+        if (!validateIK(command.mov_l_params.pose)) {
+          const auto & pos = command.mov_l_params.pose.pose.position;
+          const auto & orient = command.mov_l_params.pose.pose.orientation;
+          RCLCPP_ERROR(
+            node_logging_if_->get_logger(),
+            "Command %zu (MovL): Target pose unreachable - pos(%.3f, %.3f, %.3f), orient(%.3f, %.3f, %.3f, %.3f)",
+            i, pos.x, pos.y, pos.z, orient.x, orient.y, orient.z, orient.w);
+          return false;
+        }
         break;
 
       case mg400_msgs::msg::Command::CT_JOINT_MOV_J:
-        if (!validateAngles(command.joint_mov_j_params.joint_angles)) {return false;}
+        if (!validateAngles(command.joint_mov_j_params.joint_angles)) {
+          const auto & angles = command.joint_mov_j_params.joint_angles;
+          RCLCPP_ERROR(
+            node_logging_if_->get_logger(),
+            "Command %zu (JointMovJ): Joint angles out of range - [%.3f, %.3f, %.3f, %.3f]",
+            i, angles[0], angles[1], angles[2], angles[3]);
+          return false;
+        }
         break;
 
       case mg400_msgs::msg::Command::CT_MOV_JIO:
-        if (!validateIK(command.mov_jio_params.pose)) {return false;}
+        if (!validateIK(command.mov_jio_params.pose)) {
+          const auto & pos = command.mov_jio_params.pose.pose.position;
+          const auto & orient = command.mov_jio_params.pose.pose.orientation;
+          RCLCPP_ERROR(
+            node_logging_if_->get_logger(),
+            "Command %zu (MovJIO): Target pose unreachable - pos(%.3f, %.3f, %.3f), orient(%.3f, %.3f, %.3f, %.3f)",
+            i, pos.x, pos.y, pos.z, orient.x, orient.y, orient.z, orient.w);
+          return false;
+        }
         break;
 
       case mg400_msgs::msg::Command::CT_MOV_LIO:
-        if (!validateIK(command.mov_lio_params.pose)) {return false;}
+        if (!validateIK(command.mov_lio_params.pose)) {
+          const auto & pos = command.mov_lio_params.pose.pose.position;
+          const auto & orient = command.mov_lio_params.pose.pose.orientation;
+          RCLCPP_ERROR(
+            node_logging_if_->get_logger(),
+            "Command %zu (MovLIO): Target pose unreachable - pos(%.3f, %.3f, %.3f), orient(%.3f, %.3f, %.3f, %.3f)",
+            i, pos.x, pos.y, pos.z, orient.x, orient.y, orient.z, orient.w);
+          return false;
+        }
         break;
 
       default:
