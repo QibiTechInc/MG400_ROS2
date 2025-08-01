@@ -49,24 +49,36 @@ bool MG400Interface::activate()
   this->realtime_tcp_interface->init();
   this->motion_tcp_if_->init();
 
+  // Wait for the connection to be established.
   auto clock = rclcpp::Clock();
   const auto start = clock.now();
-
-  using namespace std::chrono_literals;  // NOLINT
-  if (rclcpp::sleep_for(2s) && !this->isConnected()) {
+  const auto timeout = rclcpp::Duration::from_seconds(10.0);
+  while ((clock.now() - start) < timeout) {
+    if (this->isConnected()) {
+      break;
+    }
+    rclcpp::sleep_for(500ms);
+    RCLCPP_INFO(this->getLogger(), "Connecting to DOBOT MG400 at %s ...", this->IP.c_str());
+  }
+  if (!this->isConnected()) {
     RCLCPP_ERROR(this->getLogger(), "Could not connect to DOBOT MG400.");
     this->deactivate();
     return false;
   }
 
-  if (this->isConnected() && !this->ok()) {
-    RCLCPP_WARN(
-      this->getLogger(),
-      "Connection established but no data sent from DOBOT MG400. Waiting...");
-    if (rclcpp::sleep_for(5s) && !this->ok()) {
-      this->deactivate();
-      return false;
+  // Wait for the data to be received.
+  const auto data_timeout = rclcpp::Duration::from_seconds(10.0);
+  const auto data_start = clock.now();
+  while ((clock.now() - data_start) < data_timeout) {
+    if (this->ok()) {
+      break;
     }
+    rclcpp::sleep_for(500ms);
+  }
+  if (!this->ok()) {
+    RCLCPP_ERROR(this->getLogger(), "Connection established but no data received.");
+    this->deactivate();
+    return false;
   }
 
   RCLCPP_INFO(this->getLogger(), "Connected to DOBOT MG400");
