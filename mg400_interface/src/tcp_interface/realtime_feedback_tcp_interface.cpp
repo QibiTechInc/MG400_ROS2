@@ -120,7 +120,7 @@ void RealtimeFeedbackTcpInterface::recvData()
     try {
       // Error: Connection error
       if (!this->tcp_socket_->isConnected()) {
-        this->tcp_socket_->connect(1s);
+        this->tcp_socket_->connect(10s);
         continue;
       }
 
