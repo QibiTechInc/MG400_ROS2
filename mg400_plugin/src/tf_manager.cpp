@@ -17,7 +17,7 @@
 namespace mg400_plugin
 {
 
-TFManager& TFManager::getInstance()
+TFManager & TFManager::getInstance()
 {
   static TFManager instance;
   return instance;
@@ -26,7 +26,7 @@ TFManager& TFManager::getInstance()
 void TFManager::initialize(const rclcpp::node_interfaces::NodeClockInterface::SharedPtr clock_if)
 {
   std::lock_guard<std::mutex> lock(mutex_);
-  
+
   if (initialized_) {
     return;  // Already initialized
   }

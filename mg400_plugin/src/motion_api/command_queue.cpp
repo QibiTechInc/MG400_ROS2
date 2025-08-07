@@ -34,7 +34,7 @@ void CommandQueue::configure(
   }
 
   // Initialize TF manager if not already initialized
-  TFManager& tf_manager = TFManager::getInstance();
+  TFManager & tf_manager = TFManager::getInstance();
   if (!tf_manager.isInitialized()) {
     tf_manager.initialize(node_clock_if);
   }
@@ -404,7 +404,7 @@ bool CommandQueue::transformPoseToOrigin(
 {
   try {
     // Use the TFManager to get the transform
-    TFManager& tf_manager = TFManager::getInstance();
+    TFManager & tf_manager = TFManager::getInstance();
     auto tf_buffer = tf_manager.getBuffer();
     auto transform = tf_buffer->lookupTransform(
       this->mg400_interface_->realtime_tcp_interface->frame_id_prefix + "mg400_origin_link",

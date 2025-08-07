@@ -32,9 +32,9 @@ void MovL::configure(
   {
     return;
   }
-  
+
   // Initialize TF manager if not already initialized
-  TFManager& tf_manager = TFManager::getInstance();
+  TFManager & tf_manager = TFManager::getInstance();
   if (!tf_manager.isInitialized()) {
     tf_manager.initialize(node_clock_if);
   }
@@ -75,7 +75,7 @@ rclcpp_action::GoalResponse MovL::handle_goal(
 
   // tf (from goal->pose to this->tf_goal_)
   try {
-    TFManager& tf_manager = TFManager::getInstance();
+    TFManager & tf_manager = TFManager::getInstance();
     auto tf_buffer = tf_manager.getBuffer();
     const auto transform = tf_buffer->lookupTransform(
       this->mg400_interface_->realtime_tcp_interface->frame_id_prefix + "mg400_origin_link",
