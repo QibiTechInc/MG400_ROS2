@@ -51,7 +51,7 @@ void DashboardTcpInterface::checkConnection()
   while (this->is_running_) {
     try {
       if (!this->tcp_socket_->isConnected()) {
-        this->tcp_socket_->connect(1s);
+        this->tcp_socket_->connect(10s);
       } else {
         rclcpp::sleep_for(1s);
         continue;
