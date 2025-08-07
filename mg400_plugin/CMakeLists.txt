@@ -20,7 +20,8 @@ foreach(TARGET ${TARGETS})
   ament_auto_add_library(
     ${PROJECT_NAME}_${TARGET}
     SHARED
-      ${MY_SRCS})
+      ${MY_SRCS}
+      src/tf_manager.cpp)
   pluginlib_export_plugin_description_file(
     mg400_plugin_base ${TARGET}_plugins.xml)
 endforeach()

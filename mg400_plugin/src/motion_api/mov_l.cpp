@@ -32,10 +32,12 @@ void MovL::configure(
   {
     return;
   }
-
-  // setup for using tf
-  this->tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node_clock_if_->get_clock());
-  this->tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*this->tf_buffer_);
+  
+  // Initialize TF manager if not already initialized
+  TFManager& tf_manager = TFManager::getInstance();
+  if (!tf_manager.isInitialized()) {
+    tf_manager.initialize(node_clock_if);
+  }
 
   using namespace std::placeholders;  // NOLINT
 
@@ -73,7 +75,9 @@ rclcpp_action::GoalResponse MovL::handle_goal(
 
   // tf (from goal->pose to this->tf_goal_)
   try {
-    const auto transform = this->tf_buffer_->lookupTransform(
+    TFManager& tf_manager = TFManager::getInstance();
+    auto tf_buffer = tf_manager.getBuffer();
+    const auto transform = tf_buffer->lookupTransform(
       this->mg400_interface_->realtime_tcp_interface->frame_id_prefix + "mg400_origin_link",
       goal->pose.header.frame_id, rclcpp::Time(0));
     tf2::doTransform(goal->pose, this->tf_goal_, transform);

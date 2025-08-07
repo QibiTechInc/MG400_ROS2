@@ -39,9 +39,7 @@ private:
   rclcpp_action::Server<ActionT>::SharedPtr action_server_;
 
   mg400_common::MG400IKUtil mg400_ik_util_;
-  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
-  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
-
+  
 public:
   void configure(
     const mg400_interface::MotionCommander::SharedPtr,

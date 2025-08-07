@@ -22,6 +22,7 @@
 #include <mg400_msgs/msg/robot_mode.hpp>
 #include <mg400_plugin_base/api_plugin_base.hpp>
 #include <mg400_plugin/plugin_utils.hpp>
+#include <mg400_plugin/tf_manager.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
 #include <tf2/utils.h>
 #include <tf2_ros/buffer.h>
@@ -39,8 +40,6 @@ private:
   rclcpp_action::Server<ActionT>::SharedPtr action_server_;
 
   mg400_common::MG400IKUtil mg400_ik_util_;
-  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
-  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
   geometry_msgs::msg::PoseStamped tf_goal_;
 
