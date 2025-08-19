@@ -61,6 +61,7 @@ public:
   bool isConnected() const;
   void send(const void *, uint32_t);
   bool recv(void *, uint32_t, const std::chrono::nanoseconds &);
+  bool recv(void *, uint32_t, uint32_t &, const std::chrono::nanoseconds &);
   std::string toString();
 };
 }  // namespace mg400_interface

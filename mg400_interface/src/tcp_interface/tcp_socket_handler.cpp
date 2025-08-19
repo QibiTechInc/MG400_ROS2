@@ -153,6 +153,43 @@ bool TcpSocketHandler::recv(void * buf, uint32_t len, const std::chrono::nanosec
   return true;
 }
 
+bool TcpSocketHandler::recv(
+  void * buf, uint32_t len, uint32_t & received_data_len,
+  const std::chrono::nanoseconds & timeout)
+{
+  uint8_t * tmp = reinterpret_cast<uint8_t *>(buf);
+  fd_set read_fds;
+  timeval tv = {0, 0};
+  received_data_len = 0;
+
+  while (len) {
+    FD_ZERO(&read_fds);
+    FD_SET(this->fd_, &read_fds);
+
+    tv.tv_sec = timeout.count() / static_cast<int>(1e9);
+    tv.tv_usec = (timeout.count() % static_cast<int>(1e9)) / static_cast<int>(1e3);
+    int err = ::select(this->fd_ + 1, &read_fds, nullptr, nullptr, &tv);
+    if (err < 0) {
+      this->disConnect();
+      throw TcpSocketException(this->toString() + std::string(" select() : ") + strerror(errno));
+    } else if (err == 0 || FD_ISSET(this->fd_, &read_fds) == 0) {
+      return false;
+    }
+    err = static_cast<int>(::read(fd_, tmp, len));
+    if (err < 0) {
+      this->disConnect();
+      throw TcpSocketException(this->toString() + std::string(" ::read() ") + strerror(errno));
+    } else if (err == 0) {
+      this->disConnect();
+      throw TcpSocketException(this->toString() + std::string(" tcp server has disconnected."));
+    }
+    len -= err;
+    tmp += err;
+    received_data_len += err;
+  }
+  return true;
+}
+
 std::string TcpSocketHandler::toString()
 {
   return this->ip_ + ":" + std::to_string(this->port_);
