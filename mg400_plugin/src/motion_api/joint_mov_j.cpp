@@ -33,10 +33,6 @@ void JointMovJ::configure(
     return;
   }
 
-  // setup for using tf
-  this->tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node_clock_if_->get_clock());
-  this->tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*this->tf_buffer_);
-
   using namespace std::placeholders;  // NOLINT
 
   this->action_server_ =
