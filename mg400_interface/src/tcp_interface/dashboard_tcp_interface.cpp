@@ -100,6 +100,11 @@ std::string DashboardTcpInterface::recvResponse()
       uint32_t bytes_received = 0;
       this->tcp_socket_->recv(buffer.data(), kChunkSize, bytes_received, 500ms);
 
+      if (bytes_received == 0) {
+        // No data received, break the loop
+        break;
+      }
+
       // Find semicolon using efficient search
       auto * semicolon_pos = std::find(buffer.begin(), buffer.end(), ';');
 
