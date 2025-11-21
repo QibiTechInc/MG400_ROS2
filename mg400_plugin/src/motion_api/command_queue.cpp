@@ -415,7 +415,7 @@ int CommandQueue::sendCommand(
   for (const auto & command : commands) {
     switch (command.command_type) {
       case mg400_msgs::msg::Command::CT_MOV_J:
-        if (equal_poses(command.mov_j_params.pose, current_pose) || sent_command_count == 0) {
+        if (equal_poses(command.mov_j_params.pose, current_pose) && sent_command_count == 0) {
           break;
         }
         sendMovJ(command.mov_j_params);
@@ -423,7 +423,7 @@ int CommandQueue::sendCommand(
         break;
 
       case mg400_msgs::msg::Command::CT_MOV_L:
-        if (equal_poses(command.mov_l_params.pose, current_pose) || sent_command_count == 0) {
+        if (equal_poses(command.mov_l_params.pose, current_pose) && sent_command_count == 0) {
           break;
         }
         sendMovL(command.mov_l_params);
@@ -431,9 +431,8 @@ int CommandQueue::sendCommand(
         break;
 
       case mg400_msgs::msg::Command::CT_JOINT_MOV_J:
-        if (equal_joints(
-            command.joint_mov_j_params.joint_angles,
-            current_angles) || sent_command_count == 0)
+        if (equal_joints(command.joint_mov_j_params.joint_angles, current_angles) &&
+          sent_command_count == 0)
         {
           break;
         }
@@ -442,7 +441,7 @@ int CommandQueue::sendCommand(
         break;
 
       case mg400_msgs::msg::Command::CT_MOV_JIO:
-        if (equal_poses(command.mov_jio_params.pose, current_pose) || sent_command_count == 0) {
+        if (equal_poses(command.mov_jio_params.pose, current_pose) && sent_command_count == 0) {
           break;
         }
         sendMovJIO(command.mov_jio_params);
@@ -450,7 +449,7 @@ int CommandQueue::sendCommand(
         break;
 
       case mg400_msgs::msg::Command::CT_MOV_LIO:
-        if (equal_poses(command.mov_lio_params.pose, current_pose) || sent_command_count == 0) {
+        if (equal_poses(command.mov_lio_params.pose, current_pose) && sent_command_count == 0) {
           break;
         }
         sendMovLIO(command.mov_lio_params);
