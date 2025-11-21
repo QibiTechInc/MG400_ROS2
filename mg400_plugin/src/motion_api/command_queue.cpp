@@ -109,7 +109,7 @@ void CommandQueue::execute(const std::shared_ptr<GoalHandle> goal_handle)
   auto result = std::make_shared<ActionT::Result>();
   result->result = false;
 
-  // send MovJ command
+  // send motion commands
   try {
     this->sendCommand(goal->commands);
   } catch (const std::exception & e) {
