@@ -109,14 +109,6 @@ void CommandQueue::execute(const std::shared_ptr<GoalHandle> goal_handle)
   auto result = std::make_shared<ActionT::Result>();
   result->result = false;
 
-  // send motion commands
-  try {
-    this->sendCommand(goal->commands);
-  } catch (const std::exception & e) {
-    RCLCPP_ERROR(this->node_logging_if_->get_logger(), e.what());
-    return;
-  }
-
   const auto update_pose_and_angles =
     [&](geometry_msgs::msg::PoseStamped & pose, std::array<double, 4> & angles) -> void
     {
@@ -127,6 +119,26 @@ void CommandQueue::execute(const std::shared_ptr<GoalHandle> goal_handle)
       this->mg400_interface_->realtime_tcp_interface->getCurrentJointStates(angles);
     };
 
+  // send motion commands
+  geometry_msgs::msg::PoseStamped current_pose;
+  std::array<double, 4> current_angles;
+  int sent_command_count = 0;
+  update_pose_and_angles(current_pose, current_angles);
+  try {
+    sent_command_count = this->sendCommand(goal->commands, current_pose, current_angles);
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(this->node_logging_if_->get_logger(), "%s", e.what());
+    return;
+  }
+
+  if (sent_command_count == 0) {
+    RCLCPP_WARN(
+      this->node_logging_if_->get_logger(),
+      "No new command was sent to the robot because all targets are same as the current state.");
+    result->result = true;
+    goal_handle->succeed(result);
+    return;
+  }
 
   using RobotMode = mg400_msgs::msg::RobotMode;
   using namespace std::chrono_literals;   // NOLINT
@@ -365,28 +377,84 @@ void CommandQueue::sendMovLIO(const mg400_msgs::msg::MovLIO & params)
     speed_l, acc_l, cp);
 }
 
-void CommandQueue::sendCommand(const std::vector<mg400_msgs::msg::Command> & commands)
+int CommandQueue::sendCommand(
+  const std::vector<mg400_msgs::msg::Command> & commands,
+  const geometry_msgs::msg::PoseStamped & current_pose,
+  const std::array<double, 4> & current_angles)
 {
+  auto equal_poses = [](const geometry_msgs::msg::PoseStamped & a,
+      const geometry_msgs::msg::PoseStamped & b,
+      double pos_tol = 1e-3,
+      double yaw_tol = 1e-3) -> bool
+    {
+      const double dx = a.pose.position.x - b.pose.position.x;
+      const double dy = a.pose.position.y - b.pose.position.y;
+      const double dz = a.pose.position.z - b.pose.position.z;
+      const double yaw_a = tf2::getYaw(a.pose.orientation);
+      const double yaw_b = tf2::getYaw(b.pose.orientation);
+      return std::fabs(dx) <= pos_tol &&
+             std::fabs(dy) <= pos_tol &&
+             std::fabs(dz) <= pos_tol &&
+             std::fabs(yaw_a - yaw_b) <= yaw_tol;
+    };
+
+  auto equal_joints = [](const std::array<double, 4> & a,
+      const std::array<double, 4> & b,
+      double tol = 1e-3) -> bool
+    {
+      for (size_t i = 0; i < a.size(); ++i) {
+        if (std::fabs(a[i] - b[i]) > tol) {
+          return false;
+        }
+      }
+      return true;
+    };
+
+  int sent_command_count = 0;
+
   for (const auto & command : commands) {
     switch (command.command_type) {
       case mg400_msgs::msg::Command::CT_MOV_J:
+        if (equal_poses(command.mov_j_params.pose, current_pose) || sent_command_count == 0) {
+          break;
+        }
         sendMovJ(command.mov_j_params);
+        sent_command_count++;
         break;
 
       case mg400_msgs::msg::Command::CT_MOV_L:
+        if (equal_poses(command.mov_l_params.pose, current_pose) || sent_command_count == 0) {
+          break;
+        }
         sendMovL(command.mov_l_params);
+        sent_command_count++;
         break;
 
       case mg400_msgs::msg::Command::CT_JOINT_MOV_J:
+        if (equal_joints(
+            command.joint_mov_j_params.joint_angles,
+            current_angles) || sent_command_count == 0)
+        {
+          break;
+        }
         sendJointMovJ(command.joint_mov_j_params);
+        sent_command_count++;
         break;
 
       case mg400_msgs::msg::Command::CT_MOV_JIO:
+        if (equal_poses(command.mov_jio_params.pose, current_pose) || sent_command_count == 0) {
+          break;
+        }
         sendMovJIO(command.mov_jio_params);
+        sent_command_count++;
         break;
 
       case mg400_msgs::msg::Command::CT_MOV_LIO:
+        if (equal_poses(command.mov_lio_params.pose, current_pose) || sent_command_count == 0) {
+          break;
+        }
         sendMovLIO(command.mov_lio_params);
+        sent_command_count++;
         break;
 
       default:
@@ -396,6 +464,7 @@ void CommandQueue::sendCommand(const std::vector<mg400_msgs::msg::Command> & com
         break;
     }
   }
+  return sent_command_count;
 }
 
 bool CommandQueue::transformPoseToOrigin(
