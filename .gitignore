@@ -5,6 +5,7 @@ __pycache__/
 # C extensions
 *.so
 .clangd
+.clang-tidy
 compile_commands.json
 
 # Distribution / packaging
