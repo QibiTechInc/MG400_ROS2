@@ -42,22 +42,23 @@ private:
     "mg400_plugin::DisableRobot",
     "mg400_plugin::EmergencyStop",
     "mg400_plugin::EnableRobot",
+    "mg400_plugin::GetErrorID",
     "mg400_plugin::PayLoad",
     "mg400_plugin::ResetRobot",
     "mg400_plugin::SetCollisionLevel",
     "mg400_plugin::SpeedFactor",
-    "mg400_plugin::ToolDOExecute",
     "mg400_plugin::ToolDI",
+    "mg400_plugin::ToolDOExecute",
   };
 
   const std::vector<std::string> default_motion_api_plugins_ = {
+    "mg400_plugin::CommandQueue",
+    "mg400_plugin::JointMovJ",
     "mg400_plugin::MoveJog",
     "mg400_plugin::MovJ",
-    "mg400_plugin::MovL",
     "mg400_plugin::MovJIO",
+    "mg400_plugin::MovL",
     "mg400_plugin::MovLIO",
-    "mg400_plugin::JointMovJ",
-    "mg400_plugin::CommandQueue",
   };
 
   std::string ip_address_;
