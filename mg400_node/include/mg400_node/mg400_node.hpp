@@ -20,6 +20,7 @@
 #include <vector>
 #include <memory>
 
+#include <lifecycle_msgs/msg/state.hpp>
 #include <mg400_msgs/msg/error_id.hpp>
 #include <mg400_msgs/msg/robot_mode.hpp>
 #include <std_msgs/msg/bool.hpp>
@@ -80,6 +81,9 @@ private:
 
   bool connection_interrupted_;
 
+  rclcpp::TimerBase::SharedPtr autostart_timer_;
+  std::atomic<bool> autostart_executed_{false};
+
 public:
   MG400Node() = delete;
   explicit MG400Node(const rclcpp::NodeOptions &);
@@ -101,6 +105,8 @@ private:
 
   void runTimer();
   void cancelTimer();
+
+  void handleAutoConfigure();
 };
 }  // namespace mg400_node
 

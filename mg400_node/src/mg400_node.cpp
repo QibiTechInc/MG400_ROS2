@@ -30,10 +30,10 @@ MG400Node::MG400Node(const rclcpp::NodeOptions & options)
     "motion_api_plugins", this->default_motion_api_plugins_);
   this->declare_parameter<std::string>("prefix", "");
 
-  if (this->get_parameter("auto_connect").as_bool()) {
-    RCLCPP_INFO(this->get_logger(), "Auto connect is enabled");
-    this->configure();
-  }
+  this->declare_parameter("auto_configure", false);
+  autostart_timer_ = this->create_wall_timer(
+    std::chrono::milliseconds(100),
+    std::bind(&MG400Node::handleAutoConfigure, this));
 }
 
 MG400Node::~MG400Node()
@@ -41,6 +41,45 @@ MG400Node::~MG400Node()
   this->cancelTimer();
   if (this->interface_) {
     this->interface_->deactivate();
+  }
+}
+
+void MG400Node::handleAutoConfigure()
+{
+  if (autostart_executed_.exchange(true)) {
+      return;
+  }
+
+  if (autostart_timer_) {
+    autostart_timer_->cancel();
+  }
+
+  if (this->get_parameter("auto_connect").as_bool()) {
+    RCLCPP_INFO(this->get_logger(), "Auto connect is enabled");
+    this->configure();
+    return;
+  }
+
+  if (!this->get_parameter("auto_configure").as_bool()) {
+    return;
+  }
+
+  RCLCPP_INFO(this->get_logger(), "Attempting auto-configure...");
+  try {
+    auto state = this->configure();
+    if (state.id() != lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE) {
+      RCLCPP_ERROR(
+        this->get_logger(), "Auto-configure failed (State ID: %d)",
+        state.id());
+      return;
+    } else {
+      RCLCPP_INFO(this->get_logger(), "Auto-configure successful");
+    }
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(
+      this->get_logger(), "Auto-configure exception: %s",
+      e.what());
+    return;
   }
 }
 
