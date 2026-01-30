@@ -47,7 +47,7 @@ MG400Node::~MG400Node()
 void MG400Node::handleAutoConfigure()
 {
   if (autostart_executed_.exchange(true)) {
-      return;
+    return;
   }
 
   if (autostart_timer_) {
