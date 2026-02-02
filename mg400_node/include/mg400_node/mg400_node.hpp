@@ -81,8 +81,8 @@ private:
 
   bool connection_interrupted_;
 
-  rclcpp::TimerBase::SharedPtr autostart_timer_;
-  std::atomic<bool> autostart_executed_{false};
+  rclcpp::TimerBase::SharedPtr autoconfigure_timer_;
+  std::atomic<bool> autoconfigure_executed_{false};
 
 public:
   MG400Node() = delete;
