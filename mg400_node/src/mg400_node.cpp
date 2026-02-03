@@ -22,7 +22,9 @@ using namespace std::chrono_literals;   // NOLINT
 MG400Node::MG400Node(const rclcpp::NodeOptions & options)
 : rclcpp_lifecycle::LifecycleNode("mg400_node", options)
 {
+  this->declare_parameter<bool>("auto_configure", true);
   this->declare_parameter<bool>("auto_connect", true);
+  this->declare_parameter<int>("auto_configure_start_delay_msec", 100);
   this->declare_parameter<std::string>("ip_address", "192.168.1.6");
   this->declare_parameter<std::vector<std::string>>(
     "dashboard_api_plugins", this->default_dashboard_api_plugins_);
@@ -30,10 +32,20 @@ MG400Node::MG400Node(const rclcpp::NodeOptions & options)
     "motion_api_plugins", this->default_motion_api_plugins_);
   this->declare_parameter<std::string>("prefix", "");
 
-  if (this->get_parameter("auto_connect").as_bool()) {
-    RCLCPP_INFO(this->get_logger(), "Auto connect is enabled");
-    this->configure();
+  if (this->get_parameter("auto_configure").as_bool()) {
+    RCLCPP_INFO(
+      this->get_logger(), "Auto configure is enabled. Delaying for %ld msec.",
+      this->get_parameter("auto_configure_start_delay_msec").as_int());
   }
+
+  if (this->get_parameter("auto_connect").as_bool()) {
+    RCLCPP_INFO(this->get_logger(), "Auto connect is enabled.");
+  }
+
+  autoconfigure_timer_ = this->create_wall_timer(
+    std::chrono::milliseconds(
+      this->get_parameter("auto_configure_start_delay_msec").as_int()),
+    std::bind(&MG400Node::handleAutoConfigure, this));
 }
 
 MG400Node::~MG400Node()
@@ -41,6 +53,39 @@ MG400Node::~MG400Node()
   this->cancelTimer();
   if (this->interface_) {
     this->interface_->deactivate();
+  }
+}
+
+void MG400Node::handleAutoConfigure()
+{
+  if (autoconfigure_executed_.exchange(true)) {
+    return;
+  }
+
+  if (autoconfigure_timer_) {
+    autoconfigure_timer_->cancel();
+  }
+
+  if (this->get_parameter("auto_configure").as_bool()) {
+    RCLCPP_INFO(this->get_logger(), "Attempting auto-configure...");
+    try {
+      auto state = this->configure();
+      if (state.id() != lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE) {
+        RCLCPP_ERROR(
+          this->get_logger(), "Auto-configure failed (State ID: %d)",
+          state.id());
+        return;
+      } else {
+        RCLCPP_INFO(this->get_logger(), "Auto-configure successful");
+      }
+    } catch (const std::exception & e) {
+      RCLCPP_ERROR(
+        this->get_logger(), "Auto-configure exception: %s",
+        e.what());
+      return;
+    }
+  } else {
+    return;
   }
 }
 
