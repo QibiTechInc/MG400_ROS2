@@ -410,48 +410,75 @@ int CommandQueue::sendCommand(
       return true;
     };
 
-  int sent_command_count = 0;
+  auto is_same_as_current = [&](const mg400_msgs::msg::Command & command) -> bool
+    {
+      geometry_msgs::msg::PoseStamped transformed_pose;
+      switch (command.command_type) {
+        case mg400_msgs::msg::Command::CT_MOV_J:
+          if (!transformPoseToOrigin(command.mov_j_params.pose, transformed_pose)) {
+            return false;
+          }
+          return equal_poses(transformed_pose, current_pose);
 
-  for (const auto & command : commands) {
+        case mg400_msgs::msg::Command::CT_MOV_L:
+          if (!transformPoseToOrigin(command.mov_l_params.pose, transformed_pose)) {
+            return false;
+          }
+          return equal_poses(transformed_pose, current_pose);
+
+        case mg400_msgs::msg::Command::CT_JOINT_MOV_J:
+          return equal_joints(command.joint_mov_j_params.joint_angles, current_angles);
+
+        case mg400_msgs::msg::Command::CT_MOV_JIO:
+          if (!transformPoseToOrigin(command.mov_jio_params.pose, transformed_pose)) {
+            return false;
+          }
+          return equal_poses(transformed_pose, current_pose);
+
+        case mg400_msgs::msg::Command::CT_MOV_LIO:
+          if (!transformPoseToOrigin(command.mov_lio_params.pose, transformed_pose)) {
+            return false;
+          }
+          return equal_poses(transformed_pose, current_pose);
+
+        default:
+          return false;
+      }
+    };
+
+  size_t first_non_matching_index = 0;
+  while (first_non_matching_index < commands.size()) {
+    if (!is_same_as_current(commands[first_non_matching_index])) {
+      break;
+    }
+    ++first_non_matching_index;
+  }
+
+  int sent_command_count = 0;
+  for (size_t i = first_non_matching_index; i < commands.size(); ++i) {
+    const auto & command = commands[i];
     switch (command.command_type) {
       case mg400_msgs::msg::Command::CT_MOV_J:
-        if (equal_poses(command.mov_j_params.pose, current_pose) && sent_command_count == 0) {
-          break;
-        }
         sendMovJ(command.mov_j_params);
         sent_command_count++;
         break;
 
       case mg400_msgs::msg::Command::CT_MOV_L:
-        if (equal_poses(command.mov_l_params.pose, current_pose) && sent_command_count == 0) {
-          break;
-        }
         sendMovL(command.mov_l_params);
         sent_command_count++;
         break;
 
       case mg400_msgs::msg::Command::CT_JOINT_MOV_J:
-        if (equal_joints(command.joint_mov_j_params.joint_angles, current_angles) &&
-          sent_command_count == 0)
-        {
-          break;
-        }
         sendJointMovJ(command.joint_mov_j_params);
         sent_command_count++;
         break;
 
       case mg400_msgs::msg::Command::CT_MOV_JIO:
-        if (equal_poses(command.mov_jio_params.pose, current_pose) && sent_command_count == 0) {
-          break;
-        }
         sendMovJIO(command.mov_jio_params);
         sent_command_count++;
         break;
 
       case mg400_msgs::msg::Command::CT_MOV_LIO:
-        if (equal_poses(command.mov_lio_params.pose, current_pose) && sent_command_count == 0) {
-          break;
-        }
         sendMovLIO(command.mov_lio_params);
         sent_command_count++;
         break;
