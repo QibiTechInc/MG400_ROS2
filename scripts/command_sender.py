@@ -374,9 +374,8 @@ def reconnect_motion_socket(
     )
 
 
-def main() -> int:
-    """Run replay."""
-    args = make_parser().parse_args()
+def validate_args(args: argparse.Namespace) -> None:
+    """Validate CLI arguments."""
     if args.repeat < 1:
         raise ValueError("--repeat must be >= 1")
     if args.motion_send_retries < 1:
@@ -389,6 +388,131 @@ def main() -> int:
         raise ValueError("--wait-enable-timeout must be > 0")
     if args.wait_enable_poll_interval < 0:
         raise ValueError("--wait-enable-poll-interval must be >= 0")
+
+
+def print_error_id_diag(
+    dashboard_sock: socket.socket | None,
+    dashboard_pending: bytearray,
+    response_timeout: float,
+) -> None:
+    """Print GetErrorID diagnostic."""
+    try:
+        err_resp = send_dashboard_command_and_recv(
+            dashboard_sock,
+            dashboard_pending,
+            "GetErrorID()",
+            response_timeout,
+        )
+        print(f"           DIAG GetErrorID={err_resp or '(no response)'}")
+    except OSError as exc:
+        print(f"           DIAG failed to query GetErrorID: {exc}")
+
+
+def print_robot_mode_and_error_id_diag(
+    dashboard_sock: socket.socket | None,
+    dashboard_pending: bytearray,
+    response_timeout: float,
+) -> None:
+    """Print RobotMode/GetErrorID diagnostic."""
+    try:
+        mode_resp = send_dashboard_command_and_recv(
+            dashboard_sock,
+            dashboard_pending,
+            "RobotMode()",
+            response_timeout,
+        )
+        err_resp = send_dashboard_command_and_recv(
+            dashboard_sock,
+            dashboard_pending,
+            "GetErrorID()",
+            response_timeout,
+        )
+        print(
+            "           DIAG dashboard "
+            f"RobotMode={mode_resp or '(no response)'} "
+            f"GetErrorID={err_resp or '(no response)'}"
+        )
+    except OSError as exc:
+        print(f"           DIAG failed to query dashboard: {exc}")
+
+
+def wait_motion_batch_enable(
+    dashboard_sock: socket.socket | None,
+    dashboard_pending: bytearray,
+    response_timeout: float,
+    wait_enable_timeout: float,
+    wait_enable_poll_interval: float,
+    batch_label: str,
+) -> bool:
+    """Wait for RUNNING->ENABLE and print diagnostics on failure."""
+    print(
+        "           WAIT start: checking RobotMode() until "
+        f"RUNNING->ENABLE ({batch_label})"
+    )
+    ok = wait_until_enable_mode(
+        dashboard_sock,
+        dashboard_pending,
+        response_timeout,
+        wait_enable_timeout,
+        wait_enable_poll_interval,
+        True,
+    )
+    if not ok:
+        print_error_id_diag(dashboard_sock, dashboard_pending, response_timeout)
+    return ok
+
+
+def send_motion_with_retry(
+    command: str,
+    motion_sock: socket.socket | None,
+    dashboard_sock: socket.socket | None,
+    dashboard_pending: bytearray,
+    args: argparse.Namespace,
+) -> tuple[socket.socket | None, bool]:
+    """Send one motion command with reconnect retries."""
+    if motion_sock is None:
+        raise RuntimeError("Motion socket is not open")
+
+    for send_attempt in range(1, args.motion_send_retries + 1):
+        try:
+            motion_sock.sendall(command.encode("utf-8"))
+            return motion_sock, True
+        except (ConnectionResetError, BrokenPipeError, OSError) as exc:
+            print(
+                "           WARN motion send failed "
+                f"(attempt {send_attempt}/{args.motion_send_retries}): {exc}"
+            )
+            if send_attempt >= args.motion_send_retries:
+                break
+            try:
+                motion_sock = reconnect_motion_socket(
+                    motion_sock,
+                    args.ip,
+                    args.motion_port,
+                    args.connect_timeout,
+                    args.connect_retries,
+                    args.connect_retry_interval,
+                )
+            except RuntimeError as reconnect_exc:
+                print(f"           ERROR motion reconnect failed: {reconnect_exc}")
+                print_robot_mode_and_error_id_diag(
+                    dashboard_sock,
+                    dashboard_pending,
+                    args.response_timeout,
+                )
+                return motion_sock, False
+            print(
+                "           INFO motion socket reconnected: "
+                f"{args.ip}:{args.motion_port}"
+            )
+
+    return motion_sock, False
+
+
+def main() -> int:
+    """Run replay."""
+    args = make_parser().parse_args()
+    validate_args(args)
 
     commands = extract_commands(args.input)
     selected = select_commands(commands, args.start, args.limit)
@@ -456,57 +580,13 @@ def main() -> int:
                     f"SEND {command}"
                 )
                 if motion_cmd:
-                    if motion_sock is None:
-                        raise RuntimeError("Motion socket is not open")
-                    sent_ok = False
-                    for send_attempt in range(1, args.motion_send_retries + 1):
-                        try:
-                            motion_sock.sendall(command.encode("utf-8"))
-                            sent_ok = True
-                            break
-                        except (ConnectionResetError, BrokenPipeError, OSError) as exc:
-                            print(
-                                "           WARN motion send failed "
-                                f"(attempt {send_attempt}/{args.motion_send_retries}): {exc}"
-                            )
-                            if send_attempt >= args.motion_send_retries:
-                                break
-                            try:
-                                motion_sock = reconnect_motion_socket(
-                                    motion_sock,
-                                    args.ip,
-                                    args.motion_port,
-                                    args.connect_timeout,
-                                    args.connect_retries,
-                                    args.connect_retry_interval,
-                                )
-                            except RuntimeError as reconnect_exc:
-                                print(f"           ERROR motion reconnect failed: {reconnect_exc}")
-                                try:
-                                    mode_resp = send_dashboard_command_and_recv(
-                                        dashboard_sock,
-                                        dashboard_pending,
-                                        "RobotMode()",
-                                        args.response_timeout,
-                                    )
-                                    err_resp = send_dashboard_command_and_recv(
-                                        dashboard_sock,
-                                        dashboard_pending,
-                                        "GetErrorID()",
-                                        args.response_timeout,
-                                    )
-                                    print(
-                                        "           DIAG dashboard "
-                                        f"RobotMode={mode_resp or '(no response)'} "
-                                        f"GetErrorID={err_resp or '(no response)'}"
-                                    )
-                                except OSError as diag_exc:
-                                    print(f"           DIAG failed to query dashboard: {diag_exc}")
-                                return 2
-                            print(
-                                "           INFO motion socket reconnected: "
-                                f"{args.ip}:{args.motion_port}"
-                            )
+                    motion_sock, sent_ok = send_motion_with_retry(
+                        command,
+                        motion_sock,
+                        dashboard_sock,
+                        dashboard_pending,
+                        args,
+                    )
                     if not sent_ok:
                         print("Motion send failed after retries. Aborting.")
                         return 2
@@ -516,40 +596,28 @@ def main() -> int:
                         args.motion_enable_sync_every > 0
                         and motion_batch_count >= args.motion_enable_sync_every
                     ):
-                        print(
-                            "           WAIT start: checking RobotMode() until "
-                            f"RUNNING->ENABLE (batch={motion_batch_count})"
-                        )
-                        ok = wait_until_enable_mode(
+                        ok = wait_motion_batch_enable(
                             dashboard_sock,
                             dashboard_pending,
                             args.response_timeout,
                             args.wait_enable_timeout,
                             args.wait_enable_poll_interval,
-                            True,
+                            f"batch={motion_batch_count}",
                         )
                         if not ok:
-                            try:
-                                err_resp = send_dashboard_command_and_recv(
-                                    dashboard_sock,
-                                    dashboard_pending,
-                                    "GetErrorID()",
-                                    args.response_timeout,
-                                )
-                                print(f"           DIAG GetErrorID={err_resp or '(no response)'}")
-                            except OSError as diag_exc:
-                                print(f"           DIAG failed to query GetErrorID: {diag_exc}")
                             return 2
                         motion_batch_count = 0
                     continue
 
                 if dashboard_sock is None:
                     raise RuntimeError("Dashboard socket is not open")
-                dashboard_sock.sendall(command.encode("utf-8"))
-                total_dashboard_sent += 1
-                response = recv_tcp_response(
-                    dashboard_sock, args.response_timeout, dashboard_pending
+                response = send_dashboard_command_and_recv(
+                    dashboard_sock,
+                    dashboard_pending,
+                    command,
+                    args.response_timeout,
                 )
+                total_dashboard_sent += 1
                 print(f"           RECV {response if response else '(no response)'}")
                 if not response:
                     print("No dashboard response. Aborting.")
@@ -557,29 +625,15 @@ def main() -> int:
 
             # Always synchronize the final partial motion batch in this replay.
             if args.motion_enable_sync_every > 0 and motion_batch_count > 0:
-                print(
-                    "           WAIT start: checking RobotMode() until "
-                    f"RUNNING->ENABLE (final batch={motion_batch_count})"
-                )
-                ok = wait_until_enable_mode(
+                ok = wait_motion_batch_enable(
                     dashboard_sock,
                     dashboard_pending,
                     args.response_timeout,
                     args.wait_enable_timeout,
                     args.wait_enable_poll_interval,
-                    True,
+                    f"final batch={motion_batch_count}",
                 )
                 if not ok:
-                    try:
-                        err_resp = send_dashboard_command_and_recv(
-                            dashboard_sock,
-                            dashboard_pending,
-                            "GetErrorID()",
-                            args.response_timeout,
-                        )
-                        print(f"           DIAG GetErrorID={err_resp or '(no response)'}")
-                    except OSError as diag_exc:
-                        print(f"           DIAG failed to query GetErrorID: {diag_exc}")
                     return 2
 
         print(
