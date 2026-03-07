@@ -14,6 +14,8 @@
 
 #include "mg400_plugin/motion_api/command_queue.hpp"
 
+#include <algorithm>
+
 namespace mg400_plugin
 {
 
@@ -119,16 +121,174 @@ void CommandQueue::execute(const std::shared_ptr<GoalHandle> goal_handle)
       this->mg400_interface_->realtime_tcp_interface->getCurrentJointStates(angles);
     };
 
-  // send motion commands
+  using RobotMode = mg400_msgs::msg::RobotMode;
+  using namespace std::chrono_literals;   // NOLINT
+  constexpr size_t kEnableSyncEvery = 40;
+
+  const auto append_error_id_to_result = [&]() -> void
+    {
+      try {
+        const std::array<std::vector<int>, 6> error_id =
+          this->mg400_interface_->dashboard_commander->getErrorId();
+        this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(
+          error_id, result->error_id);
+      } catch (const std::exception & e) {
+        RCLCPP_WARN(this->node_logging_if_->get_logger(), "Failed to get Error ID: %s", e.what());
+      }
+    };
+
+  const auto wait_until_running_and_enable = [&]() -> bool
+    {
+      // TODO(anyone): Should calculate timeout with expectation goal time
+      const auto timeout = rclcpp::Duration(60s);
+      const auto start = this->node_clock_if_->get_clock()->now();
+      update_pose_and_angles(feedback->current_pose, feedback->current_angles);
+
+      while (!this->mg400_interface_->realtime_tcp_interface->isRobotMode(RobotMode::RUNNING)) {
+        if (this->node_clock_if_->get_clock()->now() - start > rclcpp::Duration(5s)) {
+          RCLCPP_ERROR(
+            this->node_logging_if_->get_logger(),
+            "execution timeout: Robot mode did not become RUNNING.");
+          append_error_id_to_result();
+          return false;
+        }
+
+        if (this->mg400_interface_->realtime_tcp_interface->isRobotMode(RobotMode::ERROR)) {
+          RCLCPP_ERROR(
+            this->node_logging_if_->get_logger(),
+            "Robot Mode Error while checking becoming RUNNING");
+          append_error_id_to_result();
+          return false;
+        }
+
+        control_freq.sleep();
+      }
+
+      rclcpp::Time enable_start_time;
+      bool enable_mode_confirmed = false;
+      const auto enable_duration_threshold = rclcpp::Duration::from_seconds(0.3);
+
+      while (!enable_mode_confirmed) {
+        if (!this->mg400_interface_->realtime_tcp_interface->isRobotMode(RobotMode::ENABLE)) {
+          enable_start_time = rclcpp::Time();
+
+          if (!this->mg400_interface_->ok()) {
+            RCLCPP_ERROR(this->node_logging_if_->get_logger(), "MG400 Connection Error");
+            append_error_id_to_result();
+            return false;
+          }
+          if (this->mg400_interface_->realtime_tcp_interface->isRobotMode(RobotMode::ERROR)) {
+            RCLCPP_ERROR(
+              this->node_logging_if_->get_logger(),
+              "Robot Mode Error while checking goal");
+            append_error_id_to_result();
+            return false;
+          }
+          if (this->node_clock_if_->get_clock()->now() - start > timeout) {
+            RCLCPP_ERROR(this->node_logging_if_->get_logger(), "execution timeout");
+            append_error_id_to_result();
+            return false;
+          }
+        } else {
+          if (enable_start_time.nanoseconds() == 0) {
+            enable_start_time = this->node_clock_if_->get_clock()->now();
+          } else if (this->node_clock_if_->get_clock()->now() - enable_start_time >=
+            enable_duration_threshold)
+          {
+            enable_mode_confirmed = true;
+          }
+        }
+
+        update_pose_and_angles(feedback->current_pose, feedback->current_angles);
+        goal_handle->publish_feedback(feedback);
+        control_freq.sleep();
+      }
+      return true;
+    };
+
   geometry_msgs::msg::PoseStamped current_pose;
   std::array<double, 4> current_angles;
-  int sent_command_count = 0;
   update_pose_and_angles(current_pose, current_angles);
-  try {
-    sent_command_count = this->sendCommand(goal->commands, current_pose, current_angles);
-  } catch (const std::exception & e) {
-    RCLCPP_ERROR(this->node_logging_if_->get_logger(), "%s", e.what());
-    return;
+
+  const auto equal_poses = [](const geometry_msgs::msg::PoseStamped & a,
+      const geometry_msgs::msg::PoseStamped & b,
+      const double pos_tol = 1e-3,
+      const double yaw_tol = 1e-3) -> bool
+    {
+      const double dx = a.pose.position.x - b.pose.position.x;
+      const double dy = a.pose.position.y - b.pose.position.y;
+      const double dz = a.pose.position.z - b.pose.position.z;
+      const double yaw_a = tf2::getYaw(a.pose.orientation);
+      const double yaw_b = tf2::getYaw(b.pose.orientation);
+      return std::fabs(dx) <= pos_tol &&
+             std::fabs(dy) <= pos_tol &&
+             std::fabs(dz) <= pos_tol &&
+             std::fabs(yaw_a - yaw_b) <= yaw_tol;
+    };
+
+  const auto equal_joints = [](const std::array<double, 4> & a,
+      const std::array<double, 4> & b,
+      const double tol = 1e-3) -> bool
+    {
+      for (size_t i = 0; i < a.size(); ++i) {
+        if (std::fabs(a[i] - b[i]) > tol) {
+          return false;
+        }
+      }
+      return true;
+    };
+
+  const auto is_same_as_current = [&](const mg400_msgs::msg::Command & command) -> bool
+    {
+      geometry_msgs::msg::PoseStamped transformed_pose;
+      switch (command.command_type) {
+        case mg400_msgs::msg::Command::CT_MOV_J:
+          if (!transformPoseToOrigin(command.mov_j_params.pose, transformed_pose)) {
+            return false;
+          }
+          return equal_poses(transformed_pose, current_pose);
+        case mg400_msgs::msg::Command::CT_MOV_L:
+          if (!transformPoseToOrigin(command.mov_l_params.pose, transformed_pose)) {
+            return false;
+          }
+          return equal_poses(transformed_pose, current_pose);
+        case mg400_msgs::msg::Command::CT_JOINT_MOV_J:
+          return equal_joints(command.joint_mov_j_params.joint_angles, current_angles);
+        case mg400_msgs::msg::Command::CT_MOV_JIO:
+          if (!transformPoseToOrigin(command.mov_jio_params.pose, transformed_pose)) {
+            return false;
+          }
+          return equal_poses(transformed_pose, current_pose);
+        case mg400_msgs::msg::Command::CT_MOV_LIO:
+          if (!transformPoseToOrigin(command.mov_lio_params.pose, transformed_pose)) {
+            return false;
+          }
+          return equal_poses(transformed_pose, current_pose);
+        default:
+          return false;
+      }
+    };
+
+  size_t first_non_matching_index = 0;
+  while (first_non_matching_index < goal->commands.size()) {
+    if (!is_same_as_current(goal->commands[first_non_matching_index])) {
+      break;
+    }
+    ++first_non_matching_index;
+  }
+
+  int sent_command_count = 0;
+  for (size_t batch_start = first_non_matching_index;
+    batch_start < goal->commands.size();
+    batch_start += kEnableSyncEvery)
+  {
+    const size_t batch_end = std::min(batch_start + kEnableSyncEvery, goal->commands.size());
+    const int sent_in_batch = this->sendCommand(goal->commands, batch_start, batch_end);
+    sent_command_count += sent_in_batch;
+    if (sent_in_batch > 0 && !wait_until_running_and_enable()) {
+      goal_handle->abort(result);
+      return;
+    }
   }
 
   if (sent_command_count == 0) {
@@ -138,114 +298,6 @@ void CommandQueue::execute(const std::shared_ptr<GoalHandle> goal_handle)
     result->result = true;
     goal_handle->succeed(result);
     return;
-  }
-
-  using RobotMode = mg400_msgs::msg::RobotMode;
-  using namespace std::chrono_literals;   // NOLINT
-  // TODO(anyone): Should calculate timeout with expectation goal time
-  const auto timeout = rclcpp::Duration(60s);
-  const auto start = this->node_clock_if_->get_clock()->now();
-  update_pose_and_angles(feedback->current_pose, feedback->current_angles);
-
-  while (!this->mg400_interface_->realtime_tcp_interface->isRobotMode(RobotMode::RUNNING)) {
-    if (this->node_clock_if_->get_clock()->now() - start > rclcpp::Duration(5s)) {
-      RCLCPP_ERROR(
-        this->node_logging_if_->get_logger(),
-        "execution timeout: Robot mode did not become RUNNING.");
-      try {
-        const std::array<std::vector<int>, 6>
-        error_id = this->mg400_interface_->dashboard_commander->getErrorId();
-        for (auto id : error_id[0]) {
-          RCLCPP_ERROR(this->node_logging_if_->get_logger(), "error_id: %d", id);
-        }
-        this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(
-          error_id,
-          result->error_id);
-      } catch (const std::exception & e) {
-        RCLCPP_WARN(this->node_logging_if_->get_logger(), "Failed to get Error ID: %s", e.what());
-      }
-      goal_handle->abort(result);
-      return;
-    }
-
-    if (this->mg400_interface_->realtime_tcp_interface->isRobotMode(RobotMode::ERROR)) {
-      RCLCPP_ERROR(
-        this->node_logging_if_->get_logger(), "Robot Mode Error while checking becoming RUNNING");
-      try {
-        const std::array<std::vector<int>, 6> error_id =
-          this->mg400_interface_->dashboard_commander->getErrorId();
-        this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(
-          error_id, result->error_id);
-      } catch (const std::exception & e) {
-        RCLCPP_WARN(this->node_logging_if_->get_logger(), "Failed to get Error ID: %s", e.what());
-      }
-      goal_handle->abort(result);
-      return;
-    }
-
-    control_freq.sleep();
-  }
-
-  rclcpp::Time enable_start_time;
-  bool enable_mode_confirmed = false;
-  const auto enable_duration_threshold = rclcpp::Duration::from_seconds(0.3);
-
-  while (!enable_mode_confirmed) {
-    if (!this->mg400_interface_->realtime_tcp_interface->isRobotMode(RobotMode::ENABLE)) {
-      enable_start_time = rclcpp::Time();
-
-      if (!this->mg400_interface_->ok()) {
-        RCLCPP_ERROR(this->node_logging_if_->get_logger(), "MG400 Connection Error");
-        try {
-          const std::array<std::vector<int>, 6> error_id =
-            this->mg400_interface_->dashboard_commander->getErrorId();
-          this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(
-            error_id, result->error_id);
-        } catch (const std::exception & e) {
-          RCLCPP_WARN(this->node_logging_if_->get_logger(), "Failed to get Error ID: %s", e.what());
-        }
-        goal_handle->abort(result);
-        return;
-      }
-      if (this->mg400_interface_->realtime_tcp_interface->isRobotMode(RobotMode::ERROR)) {
-        RCLCPP_ERROR(this->node_logging_if_->get_logger(), "Robot Mode Error while checking goal");
-        try {
-          const std::array<std::vector<int>, 6> error_id =
-            this->mg400_interface_->dashboard_commander->getErrorId();
-          this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(
-            error_id, result->error_id);
-        } catch (const std::exception & e) {
-          RCLCPP_WARN(this->node_logging_if_->get_logger(), "Failed to get Error ID: %s", e.what());
-        }
-        goal_handle->abort(result);
-        return;
-      }
-      if (this->node_clock_if_->get_clock()->now() - start > timeout) {
-        RCLCPP_ERROR(this->node_logging_if_->get_logger(), "execution timeout");
-        try {
-          const std::array<std::vector<int>, 6> error_id =
-            this->mg400_interface_->dashboard_commander->getErrorId();
-          this->mg400_interface_->dashboard_commander->convertToErrorIdMsg(
-            error_id, result->error_id);
-        } catch (const std::exception & e) {
-          RCLCPP_WARN(this->node_logging_if_->get_logger(), "Failed to get Error ID: %s", e.what());
-        }
-        goal_handle->abort(result);
-        return;
-      }
-    } else {
-      if (enable_start_time.nanoseconds() == 0) {
-        enable_start_time = this->node_clock_if_->get_clock()->now();
-      } else if (this->node_clock_if_->get_clock()->now() - enable_start_time >=
-        enable_duration_threshold)
-      {
-        enable_mode_confirmed = true;
-      }
-    }
-
-    update_pose_and_angles(feedback->current_pose, feedback->current_angles);
-    goal_handle->publish_feedback(feedback);
-    control_freq.sleep();
   }
 
   RCLCPP_INFO(this->node_logging_if_->get_logger(), "Execution succeeded");
@@ -379,83 +431,11 @@ void CommandQueue::sendMovLIO(const mg400_msgs::msg::MovLIO & params)
 
 int CommandQueue::sendCommand(
   const std::vector<mg400_msgs::msg::Command> & commands,
-  const geometry_msgs::msg::PoseStamped & current_pose,
-  const std::array<double, 4> & current_angles)
+  size_t start_index,
+  size_t end_index)
 {
-  auto equal_poses = [](const geometry_msgs::msg::PoseStamped & a,
-      const geometry_msgs::msg::PoseStamped & b,
-      double pos_tol = 1e-3,
-      double yaw_tol = 1e-3) -> bool
-    {
-      const double dx = a.pose.position.x - b.pose.position.x;
-      const double dy = a.pose.position.y - b.pose.position.y;
-      const double dz = a.pose.position.z - b.pose.position.z;
-      const double yaw_a = tf2::getYaw(a.pose.orientation);
-      const double yaw_b = tf2::getYaw(b.pose.orientation);
-      return std::fabs(dx) <= pos_tol &&
-             std::fabs(dy) <= pos_tol &&
-             std::fabs(dz) <= pos_tol &&
-             std::fabs(yaw_a - yaw_b) <= yaw_tol;
-    };
-
-  auto equal_joints = [](const std::array<double, 4> & a,
-      const std::array<double, 4> & b,
-      double tol = 1e-3) -> bool
-    {
-      for (size_t i = 0; i < a.size(); ++i) {
-        if (std::fabs(a[i] - b[i]) > tol) {
-          return false;
-        }
-      }
-      return true;
-    };
-
-  auto is_same_as_current = [&](const mg400_msgs::msg::Command & command) -> bool
-    {
-      geometry_msgs::msg::PoseStamped transformed_pose;
-      switch (command.command_type) {
-        case mg400_msgs::msg::Command::CT_MOV_J:
-          if (!transformPoseToOrigin(command.mov_j_params.pose, transformed_pose)) {
-            return false;
-          }
-          return equal_poses(transformed_pose, current_pose);
-
-        case mg400_msgs::msg::Command::CT_MOV_L:
-          if (!transformPoseToOrigin(command.mov_l_params.pose, transformed_pose)) {
-            return false;
-          }
-          return equal_poses(transformed_pose, current_pose);
-
-        case mg400_msgs::msg::Command::CT_JOINT_MOV_J:
-          return equal_joints(command.joint_mov_j_params.joint_angles, current_angles);
-
-        case mg400_msgs::msg::Command::CT_MOV_JIO:
-          if (!transformPoseToOrigin(command.mov_jio_params.pose, transformed_pose)) {
-            return false;
-          }
-          return equal_poses(transformed_pose, current_pose);
-
-        case mg400_msgs::msg::Command::CT_MOV_LIO:
-          if (!transformPoseToOrigin(command.mov_lio_params.pose, transformed_pose)) {
-            return false;
-          }
-          return equal_poses(transformed_pose, current_pose);
-
-        default:
-          return false;
-      }
-    };
-
-  size_t first_non_matching_index = 0;
-  while (first_non_matching_index < commands.size()) {
-    if (!is_same_as_current(commands[first_non_matching_index])) {
-      break;
-    }
-    ++first_non_matching_index;
-  }
-
   int sent_command_count = 0;
-  for (size_t i = first_non_matching_index; i < commands.size(); ++i) {
+  for (size_t i = start_index; i < end_index; ++i) {
     const auto & command = commands[i];
     switch (command.command_type) {
       case mg400_msgs::msg::Command::CT_MOV_J:
