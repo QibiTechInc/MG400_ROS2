@@ -85,7 +85,7 @@ rclcpp_action::GoalResponse CommandQueue::handle_goal(
 }
 
 rclcpp_action::CancelResponse CommandQueue::handle_cancel(
-  const std::shared_ptr<GoalHandle>)
+  const std::shared_ptr<GoalHandle>/*unused*/)
 {
   RCLCPP_INFO(
     this->node_logging_if_->get_logger(), "Received request to cancel goal");
