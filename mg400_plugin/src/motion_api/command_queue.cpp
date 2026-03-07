@@ -123,7 +123,7 @@ void CommandQueue::execute(const std::shared_ptr<GoalHandle> goal_handle)
 
   using RobotMode = mg400_msgs::msg::RobotMode;
   using namespace std::chrono_literals;   // NOLINT
-  constexpr size_t kEnableSyncEvery = 40;
+  constexpr size_t enable_sync_every = 40;
 
   const auto append_error_id_to_result = [&]() -> void
     {
@@ -280,9 +280,9 @@ void CommandQueue::execute(const std::shared_ptr<GoalHandle> goal_handle)
   int sent_command_count = 0;
   for (size_t batch_start = first_non_matching_index;
     batch_start < goal->commands.size();
-    batch_start += kEnableSyncEvery)
+    batch_start += enable_sync_every)
   {
-    const size_t batch_end = std::min(batch_start + kEnableSyncEvery, goal->commands.size());
+    const size_t batch_end = std::min(batch_start + enable_sync_every, goal->commands.size());
     const int sent_in_batch = this->sendCommand(goal->commands, batch_start, batch_end);
     sent_command_count += sent_in_batch;
     if (sent_in_batch > 0 && !wait_until_running_and_enable()) {
