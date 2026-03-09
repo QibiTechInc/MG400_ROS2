@@ -228,7 +228,7 @@ void CommandQueue::execute(const std::shared_ptr<GoalHandle> goal_handle)
 
   const auto equal_joints = [](const std::array<double, 4> & a,
       const std::array<double, 4> & b,
-      const double tol = 1e-3) -> bool
+      const double tol = 2e-3) -> bool
     {
       for (size_t i = 0; i < a.size(); ++i) {
         if (std::fabs(a[i] - b[i]) > tol) {
