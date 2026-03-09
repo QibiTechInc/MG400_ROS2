@@ -83,7 +83,7 @@ rclcpp_action::GoalResponse CommandQueue::handle_goal(
 }
 
 rclcpp_action::CancelResponse CommandQueue::handle_cancel(
-  const std::shared_ptr<GoalHandle>)
+  const std::shared_ptr<GoalHandle>/*unused*/)
 {
   RCLCPP_INFO(
     this->node_logging_if_->get_logger(), "Received request to cancel goal");
@@ -400,7 +400,7 @@ int CommandQueue::sendCommand(
 
   auto equal_joints = [](const std::array<double, 4> & a,
       const std::array<double, 4> & b,
-      double tol = 1e-3) -> bool
+      double tol = 2e-3) -> bool
     {
       for (size_t i = 0; i < a.size(); ++i) {
         if (std::fabs(a[i] - b[i]) > tol) {
