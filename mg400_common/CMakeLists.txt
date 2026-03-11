@@ -20,8 +20,16 @@ ament_auto_add_library(${TARGET} SHARED ${src_files})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
+  find_package(ament_cmake_gtest REQUIRED)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
+
+  set(TARGET test_mg400_kinematics)
+  ament_add_gtest(${TARGET} test/${TARGET}.cpp)
+  if(TARGET ${TARGET})
+    target_include_directories(${TARGET} PRIVATE include)
+    target_link_libraries(${TARGET} ${PROJECT_NAME})
+  endif()
 endif()
 
 ament_auto_package()
