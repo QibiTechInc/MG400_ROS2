@@ -76,8 +76,8 @@ private:
   void sendMovLIO(const mg400_msgs::msg::MovLIO &);
   int sendCommand(
     const std::vector<mg400_msgs::msg::Command> &,
-    const geometry_msgs::msg::PoseStamped &,
-    const std::array<double, 4> &);
+    size_t,
+    size_t);
 
   // functions to validate each target
   bool validateIK(const geometry_msgs::msg::PoseStamped &);
