@@ -53,24 +53,6 @@ bool isAcceptedLegacyFourAxisResponse(const DashboardResponse & response)
          ResponseParser::countArrayElements(response.ret_val) == 4;
 }
 
-std::string normalizeJointNear(const std::string & joint_near)
-{
-  if (joint_near.empty()) {
-    return "{}";
-  }
-
-  std::string joint_near_buf = joint_near;
-  if (joint_near_buf.front() != '{' || joint_near_buf.back() != '}') {
-    joint_near_buf = "{" + joint_near_buf + "}";
-  }
-
-  if (ResponseParser::countArrayElements(joint_near_buf) == 4) {
-    joint_near_buf.insert(joint_near_buf.size() - 1, ",0.000000,0.000000");
-  }
-
-  return joint_near_buf;
-}
-
 }  // namespace
 
 DashboardCommander::DashboardCommander(
@@ -360,29 +342,17 @@ std::vector<double> DashboardCommander::positiveSolution(
 std::vector<double> DashboardCommander::inverseSolution(
   const double pose1, const double pose2, const double pose3,
   const double pose4,
-  const User::_user_type & user, const Tool::_tool_type & tool,
-  const bool use_joint_near,
-  const std::string & joint_near)
+  const User::_user_type & user, const Tool::_tool_type & tool)
 {
-  static char buf[512];
+  static char buf[256];
   static DashboardResponse response;
-  int cx = snprintf(
+  const int cx = snprintf(
     buf, sizeof(buf),
-    "InverseSolution(%.6lf,%.6lf,%.6lf,%.6lf,%.6lf,%.6lf,%u,%u",
+    "InverseSolution(%.6lf,%.6lf,%.6lf,%.6lf,%.6lf,%.6lf,%u,%u)",
     m2mm(pose1), m2mm(pose2), m2mm(pose3),
     // MG400 4-axis pose r (j1 + j4) round-trips through the dashboard Rx slot.
     rad2degree(pose4), 0.0, 0.0,
     user, tool);
-
-  if (use_joint_near) {
-    const std::string joint_near_buf = normalizeJointNear(joint_near);
-    cx += snprintf(
-      buf + cx, sizeof(buf) - cx,
-      ",1,%s",
-      joint_near_buf.c_str());
-  }
-
-  cx += snprintf(buf + cx, sizeof(buf) - cx, ")");
   ResponseParser::parseResponse(
     this->sendAndWaitResponse(std::string(buf, cx)), response);
   if (response.error_id != 0 && !isAcceptedLegacyFourAxisResponse(response)) {

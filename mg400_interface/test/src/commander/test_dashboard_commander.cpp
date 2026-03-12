@@ -434,29 +434,6 @@ TEST_F(TestDashboardCommander, InverseSolution) {
   ASSERT_DOUBLE_EQ(ret.at(3), 0.0);
 }
 
-TEST_F(TestDashboardCommander, InverseSolutionWithJointNear) {
-  const Eigen::Vector4d pose(0.473, -0.141, 0.469, -0.5 * M_PI);
-  const Eigen::Vector4d joints(0.0, 0.0, -0.5 * M_PI, 0.0);
-  EXPECT_CALL(
-    mock, sendCommand(
-      StrEq(
-        "InverseSolution(473.000000,-141.000000,469.000000,-90.000000,0.000000,0.000000,1,1,1,{0.000000,0.000000,-90.000000,0.000000,0.000000,0.000000})")))
-  .Times(1);
-  EXPECT_CALL(
-    mock, recvResponse()).WillOnce(
-    Return(
-      format_inverse_solution_response(
-        joints,
-        "InverseSolution(473.000000,-141.000000,469.000000,-90.000000,0.000000,0.000000,1,1,1,{0.000000,0.000000,-90.000000,0.000000,0.000000,0.000000})")));
-  const auto ret = commander->inverseSolution(
-    pose(0), pose(1), pose(2), pose(3), 1, 1, true,
-    "{0.000000,0.000000,-90.000000,0.000000}");
-  ASSERT_DOUBLE_EQ(ret.at(0), 0.0);
-  ASSERT_DOUBLE_EQ(ret.at(1), 0.0);
-  ASSERT_DOUBLE_EQ(ret.at(2), -0.5 * M_PI);
-  ASSERT_DOUBLE_EQ(ret.at(3), 0.0);
-}
-
 TEST_F(TestDashboardCommander, PositiveSolutionLegacyFourAxisResponse) {
   const Eigen::Vector4d joints(0.0, 0.0, -0.5 * M_PI, 0.0);
   const auto command = format_positive_solution_request(joints, 1, 1);

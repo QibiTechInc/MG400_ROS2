@@ -4,8 +4,6 @@ float64 z
 float64 r
 uint8 user
 uint8 tool
-bool is_joint_near
-string joint_near
 ---
 int32 error_id
 float64 j1

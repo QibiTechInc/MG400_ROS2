@@ -147,9 +147,7 @@ public:
 
   std::vector<double> inverseSolution(
     const double, const double, const double, const double,
-    const User::_user_type &, const Tool::_tool_type &,
-    const bool = false,
-    const std::string & = "");
+    const User::_user_type &, const Tool::_tool_type &);
 
   void emergencyStop();
 /*

@@ -52,8 +52,7 @@ void InverseSolution::onServiceCall(
     try {
       const auto joints = this->commander_->inverseSolution(
         req->x, req->y, req->z, req->r,
-        req->user, req->tool,
-        req->is_joint_near, req->joint_near);
+        req->user, req->tool);
       res->j1 = joints[0];
       res->j2 = joints[1];
       res->j3 = joints[2];
