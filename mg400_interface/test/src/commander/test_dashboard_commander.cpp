@@ -13,9 +13,9 @@
 // limitations under the License.
 
 #include <gmock/gmock.h>
+#include <Eigen/Core>
 #include <mg400_interface/commander/dashboard_commander.hpp>
 #include <mg400_msgs/msg/robot_mode.hpp>
-
 using ::testing::_;
 using ::testing::StrEq;
 using ::testing::Return;
@@ -26,6 +26,77 @@ using mg400_msgs::msg::DOStatus;
 using mg400_msgs::msg::Tool;
 using mg400_msgs::msg::ToolDOIndex;
 using mg400_msgs::msg::User;
+
+namespace
+{
+
+std::string format_positive_solution_request(
+  const Eigen::Vector4d & joints,
+  const uint8_t user,
+  const uint8_t tool)
+{
+  char buffer[256];
+  const int length = snprintf(
+    buffer, sizeof(buffer),
+    "PositiveSolution(%.6f,%.6f,%.6f,%.6f,0.000000,0.000000,%u,%u)",
+    mg400_interface::rad2degree(joints(0)),
+    mg400_interface::rad2degree(joints(1)),
+    mg400_interface::rad2degree(joints(2)),
+    mg400_interface::rad2degree(joints(3)),
+    user, tool);
+  return std::string(buffer, length);
+}
+
+std::string format_positive_solution_response(
+  const Eigen::Vector4d & pose,
+  const std::string & command)
+{
+  char buffer[256];
+  const int length = snprintf(
+    buffer, sizeof(buffer),
+    "0,{%.6f,%.6f,%.6f,0.000000,0.000000,%.6f},%s;",
+    mg400_interface::m2mm(pose(0)),
+    mg400_interface::m2mm(pose(1)),
+    mg400_interface::m2mm(pose(2)),
+    mg400_interface::rad2degree(pose(3)),
+    command.c_str());
+  return std::string(buffer, length);
+}
+
+std::string format_inverse_solution_request(
+  const Eigen::Vector4d & pose,
+  const uint8_t user,
+  const uint8_t tool)
+{
+  char buffer[256];
+  const int length = snprintf(
+    buffer, sizeof(buffer),
+    "InverseSolution(%.6f,%.6f,%.6f,%.6f,0.000000,0.000000,%u,%u)",
+    mg400_interface::m2mm(pose(0)),
+    mg400_interface::m2mm(pose(1)),
+    mg400_interface::m2mm(pose(2)),
+    mg400_interface::rad2degree(pose(3)),
+    user, tool);
+  return std::string(buffer, length);
+}
+
+std::string format_inverse_solution_response(
+  const Eigen::Vector4d & joints,
+  const std::string & command)
+{
+  char buffer[256];
+  const int length = snprintf(
+    buffer, sizeof(buffer),
+    "0,{%.6f,%.6f,%.6f,%.6f,0.000000,0.000000},%s;",
+    mg400_interface::rad2degree(joints(0)),
+    mg400_interface::rad2degree(joints(1)),
+    mg400_interface::rad2degree(joints(2)),
+    mg400_interface::rad2degree(joints(3)),
+    command.c_str());
+  return std::string(buffer, length);
+}
+
+}  // namespace
 
 class MockTcpInterface : public mg400_interface::DashboardTcpInterfaceBase
 {
@@ -325,6 +396,107 @@ TEST_F(TestDashboardCommander, GetPose) {
   ASSERT_DOUBLE_EQ(ret.at(3), 0.0);
   ASSERT_DOUBLE_EQ(ret.at(4), 0.0);
   ASSERT_DOUBLE_EQ(ret.at(5), 0.0);
+}
+
+TEST_F(TestDashboardCommander, PositiveSolution) {
+  const Eigen::Vector4d joints(0.0, 0.0, -0.5 * M_PI, 0.0);
+  const Eigen::Vector4d pose(0.473, -0.141, 0.469, -0.5 * M_PI);
+  const auto command = format_positive_solution_request(joints, 1, 1);
+  EXPECT_CALL(
+    mock, sendCommand(
+      StrEq(command)))
+  .Times(1);
+  EXPECT_CALL(
+    mock, recvResponse()).WillOnce(
+    Return(format_positive_solution_response(pose, command)));
+  const auto ret = commander->positiveSolution(joints(0), joints(1), joints(2), joints(3), 1, 1);
+  ASSERT_DOUBLE_EQ(ret.at(0), 0.473);
+  ASSERT_DOUBLE_EQ(ret.at(1), -0.141);
+  ASSERT_DOUBLE_EQ(ret.at(2), 0.469);
+  ASSERT_DOUBLE_EQ(ret.at(3), -0.5 * M_PI);
+}
+
+TEST_F(TestDashboardCommander, InverseSolution) {
+  const Eigen::Vector4d pose(0.473, -0.141, 0.469, -0.5 * M_PI);
+  const Eigen::Vector4d joints(0.0, 0.0, -0.5 * M_PI, 0.0);
+  const auto command = format_inverse_solution_request(pose, 1, 1);
+  EXPECT_CALL(
+    mock, sendCommand(
+      StrEq(command)))
+  .Times(1);
+  EXPECT_CALL(
+    mock, recvResponse()).WillOnce(
+    Return(format_inverse_solution_response(joints, command)));
+  const auto ret = commander->inverseSolution(pose(0), pose(1), pose(2), pose(3), 1, 1);
+  ASSERT_DOUBLE_EQ(ret.at(0), 0.0);
+  ASSERT_DOUBLE_EQ(ret.at(1), 0.0);
+  ASSERT_DOUBLE_EQ(ret.at(2), -0.5 * M_PI);
+  ASSERT_DOUBLE_EQ(ret.at(3), 0.0);
+}
+
+TEST_F(TestDashboardCommander, InverseSolutionWithJointNear) {
+  const Eigen::Vector4d pose(0.473, -0.141, 0.469, -0.5 * M_PI);
+  const Eigen::Vector4d joints(0.0, 0.0, -0.5 * M_PI, 0.0);
+  EXPECT_CALL(
+    mock, sendCommand(
+      StrEq(
+        "InverseSolution(473.000000,-141.000000,469.000000,-90.000000,0.000000,0.000000,1,1,1,{0.000000,0.000000,-90.000000,0.000000,0.000000,0.000000})")))
+  .Times(1);
+  EXPECT_CALL(
+    mock, recvResponse()).WillOnce(
+    Return(
+      format_inverse_solution_response(
+        joints,
+        "InverseSolution(473.000000,-141.000000,469.000000,-90.000000,0.000000,0.000000,1,1,1,{0.000000,0.000000,-90.000000,0.000000,0.000000,0.000000})")));
+  const auto ret = commander->inverseSolution(
+    pose(0), pose(1), pose(2), pose(3), 1, 1, true,
+    "{0.000000,0.000000,-90.000000,0.000000}");
+  ASSERT_DOUBLE_EQ(ret.at(0), 0.0);
+  ASSERT_DOUBLE_EQ(ret.at(1), 0.0);
+  ASSERT_DOUBLE_EQ(ret.at(2), -0.5 * M_PI);
+  ASSERT_DOUBLE_EQ(ret.at(3), 0.0);
+}
+
+TEST_F(TestDashboardCommander, PositiveSolutionLegacyFourAxisResponse) {
+  const Eigen::Vector4d joints(0.0, 0.0, -0.5 * M_PI, 0.0);
+  const auto command = format_positive_solution_request(joints, 1, 1);
+
+  EXPECT_CALL(
+    mock, sendCommand(
+      StrEq(command)))
+  .Times(1);
+  EXPECT_CALL(
+    mock, recvResponse()).WillOnce(
+    Return(
+      "-1,{109.499985,0.000000,296.278992,0.000000},"
+      "PositiveSolution(0.000000,0.000000,-90.000000,0.000000,0.000000,0.000000,1,1);"));
+
+  const auto ret = commander->positiveSolution(joints(0), joints(1), joints(2), joints(3), 1, 1);
+  ASSERT_DOUBLE_EQ(ret.at(0), 0.109499985);
+  ASSERT_DOUBLE_EQ(ret.at(1), 0.0);
+  ASSERT_DOUBLE_EQ(ret.at(2), 0.296278992);
+  ASSERT_DOUBLE_EQ(ret.at(3), 0.0);
+}
+
+TEST_F(TestDashboardCommander, InverseSolutionLegacyFourAxisResponse) {
+  const Eigen::Vector4d pose(0.473, -0.141, 0.469, -0.5 * M_PI);
+  const auto command = format_inverse_solution_request(pose, 1, 1);
+
+  EXPECT_CALL(
+    mock, sendCommand(
+      StrEq(command)))
+  .Times(1);
+  EXPECT_CALL(
+    mock, recvResponse()).WillOnce(
+    Return(
+      "-1,{0.000000,0.000000,-90.000000,0.000000},"
+      "InverseSolution(473.000000,-141.000000,469.000000,-90.000000,0.000000,0.000000,1,1);"));
+
+  const auto ret = commander->inverseSolution(pose(0), pose(1), pose(2), pose(3), 1, 1);
+  ASSERT_DOUBLE_EQ(ret.at(0), 0.0);
+  ASSERT_DOUBLE_EQ(ret.at(1), 0.0);
+  ASSERT_DOUBLE_EQ(ret.at(2), -0.5 * M_PI);
+  ASSERT_DOUBLE_EQ(ret.at(3), 0.0);
 }
 
 TEST_F(TestDashboardCommander, EmergencyStop) {

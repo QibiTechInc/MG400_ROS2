@@ -33,6 +33,8 @@ This package provide interface library to connect with Dobot MG400 via TCP commu
 | :heavy_check_mark:   | SetCollisionLevel |
 | :heavy_check_mark:   | GetAngle          |
 | :heavy_check_mark:   | GetPose           |
+| :heavy_check_mark:   | PositiveSolution  |
+| :heavy_check_mark:   | InverseSolution   |
 | :heavy_check_mark:   | EmergencyStop     |
 | :white_large_square: | ModbusCreate      |
 | :white_large_square: | ModbusClose       |

@@ -17,9 +17,10 @@
 
 
 #include <array>
-#include <vector>
-#include <string>
 #include <regex>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 #include "mg400_interface/command_utils.hpp"
 
@@ -62,9 +63,13 @@ class ResponseParser
 {
 public:
   static bool parseResponse(const std::string &, DashboardResponse &);
+  static size_t countArrayElements(const std::string &);
   static std::array<std::vector<int>, 6> takeErrorMessage(const std::string &);
   static std::vector<double> takePoseArray(const std::string &);
+  static std::vector<double> takeCartesianPoseArray(const std::string &);
+  static std::vector<double> takeCartesianPoseArray4(const std::string &);
   static std::vector<double> takeAngleArray(const std::string &);
+  static std::vector<double> takeAngleArray4(const std::string &);
   static int takeInt(const std::string &);
 };
 }  // namespace mg400_interface

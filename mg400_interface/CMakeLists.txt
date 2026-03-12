@@ -65,6 +65,8 @@ if(BUILD_TESTING)
     ament_add_gmock(${TARGET} test/src/commander/${TARGET}.cpp)
     target_link_libraries(${TARGET} ${PROJECT_NAME})
   endforeach()
+
+  ament_target_dependencies(test_dashboard_commander mg400_common)
 endif()
 
 ament_auto_package(

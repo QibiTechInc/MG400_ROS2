@@ -96,6 +96,62 @@ TEST(ResponseParser, takePoseArray)
   ASSERT_DOUBLE_EQ(res.at(5), 0.0);
 }
 
+TEST(ResponseParser, takeCartesianPoseArray)
+{
+  const std::string packet =
+    "0,"
+    "{350.000000,100.000000,200.000000,90.000000,0.000000,-180.000000}"
+    ",PositiveSolution();";
+
+  mg400_interface::DashboardResponse response;
+  mg400_interface::ResponseParser::parseResponse(packet, response);
+
+  const auto res = mg400_interface::ResponseParser::takeCartesianPoseArray(
+    response.ret_val);
+  ASSERT_DOUBLE_EQ(res.at(0), 0.35);
+  ASSERT_DOUBLE_EQ(res.at(1), 0.1);
+  ASSERT_DOUBLE_EQ(res.at(2), 0.2);
+  ASSERT_DOUBLE_EQ(res.at(3), 0.5 * M_PI);
+  ASSERT_DOUBLE_EQ(res.at(4), 0.0);
+  ASSERT_DOUBLE_EQ(res.at(5), -M_PI);
+}
+
+TEST(ResponseParser, takeCartesianPoseArray4)
+{
+  const std::string packet =
+    "-1,"
+    "{109.499985,0.000000,296.278992,0.000000}"
+    ",PositiveSolution();";
+
+  mg400_interface::DashboardResponse response;
+  mg400_interface::ResponseParser::parseResponse(packet, response);
+
+  const auto res = mg400_interface::ResponseParser::takeCartesianPoseArray4(
+    response.ret_val);
+  ASSERT_DOUBLE_EQ(res.at(0), 0.109499985);
+  ASSERT_DOUBLE_EQ(res.at(1), 0.0);
+  ASSERT_DOUBLE_EQ(res.at(2), 0.296278992);
+  ASSERT_DOUBLE_EQ(res.at(3), 0.0);
+}
+
+TEST(ResponseParser, takeAngleArray4)
+{
+  const std::string packet =
+    "-1,"
+    "{0.000000,0.000000,-90.000000,0.000000}"
+    ",InverseSolution();";
+
+  mg400_interface::DashboardResponse response;
+  mg400_interface::ResponseParser::parseResponse(packet, response);
+
+  const auto res = mg400_interface::ResponseParser::takeAngleArray4(
+    response.ret_val);
+  ASSERT_DOUBLE_EQ(res.at(0), 0.0);
+  ASSERT_DOUBLE_EQ(res.at(1), 0.0);
+  ASSERT_DOUBLE_EQ(res.at(2), -0.5 * M_PI);
+  ASSERT_DOUBLE_EQ(res.at(3), 0.0);
+}
+
 TEST(ResponseParser, takeInt)
 {
   const std::string packet =
