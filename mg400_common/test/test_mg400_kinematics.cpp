@@ -79,6 +79,23 @@ TEST(MG400KinematicsTest, ConstraintCheckNormalizesWrappedJ4)
   EXPECT_TRUE(result.j4_valid);
 }
 
+TEST(MG400KinematicsTest, ConstraintCheckAcceptsOverriddenLimits)
+{
+  Eigen::Vector4d joints;
+  joints << mg400_common::kinematics::deg2rad(170.0), 0.0, 0.0, 0.0;
+
+  EXPECT_FALSE(mg400_common::kinematics::check_constraints(joints).j1_valid);
+
+  mg400_common::kinematics::ConstraintOptions options;
+  options.j1_min = mg400_common::kinematics::deg2rad(-180.0);
+  options.j1_max = mg400_common::kinematics::deg2rad(180.0);
+  options.margin = 0.0;
+
+  const auto result = mg400_common::kinematics::check_constraints(joints, options);
+
+  EXPECT_TRUE(result.j1_valid);
+}
+
 TEST(MG400KinematicsTest, IKFKRoundTripRemainsStable)
 {
   std::mt19937 generator(12345);

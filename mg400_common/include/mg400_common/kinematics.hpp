@@ -78,7 +78,25 @@ struct ConstraintResult
   }
 };
 
-inline ConstraintResult check_constraints(const Eigen::Vector4d & theta)
+struct ConstraintOptions
+{
+  double j1_min = J1_MIN;
+  double j1_max = J1_MAX;
+  double j2_min = J2_MIN;
+  double j2_min_no_collision = J2_MIN_NO_COLLISION;
+  double j2_max = J2_MAX;
+  double j3_min = J3_MIN;
+  double j3_max = J3_MAX;
+  double j3_1_min = J3_1_MIN;
+  double j3_1_max = J3_1_MAX;
+  double j4_min = J4_MIN;
+  double j4_max = J4_MAX;
+  double margin = MARGIN;
+};
+
+inline ConstraintResult check_constraints(
+  const Eigen::Vector4d & theta,
+  const ConstraintOptions & options = ConstraintOptions())
 {
   ConstraintResult result;
 
@@ -92,13 +110,14 @@ inline ConstraintResult check_constraints(const Eigen::Vector4d & theta)
       return (value >= min + margin) && (value <= max - margin);
     };
 
-  result.j1_valid = within_limits(j1, J1_MIN, J1_MAX, MARGIN);
+  result.j1_valid = within_limits(j1, options.j1_min, options.j1_max, options.margin);
   result.j2_valid = (j3 > 0) ?
-    within_limits(j2, J2_MIN, J2_MAX, MARGIN) :
-    within_limits(j2, J2_MIN_NO_COLLISION, J2_MAX, MARGIN);
-  result.j3_valid = within_limits(j3, J3_MIN, J3_MAX, MARGIN);
-  result.j4_valid = within_limits(j4, J4_MIN, J4_MAX, MARGIN);
-  result.j3_1_valid = within_limits(j3_1, J3_1_MIN, J3_1_MAX, MARGIN);
+    within_limits(j2, options.j2_min, options.j2_max, options.margin) :
+    within_limits(j2, options.j2_min_no_collision, options.j2_max, options.margin);
+  result.j3_valid = within_limits(j3, options.j3_min, options.j3_max, options.margin);
+  result.j4_valid = within_limits(j4, options.j4_min, options.j4_max, options.margin);
+  result.j3_1_valid = within_limits(
+    j3_1, options.j3_1_min, options.j3_1_max, options.margin);
 
   return result;
 }
