@@ -14,6 +14,7 @@
 
 #include "mg400_interface/joint_handler.hpp"
 
+#include <mg400_common/kinematics.hpp>
 
 namespace mg400_interface
 {
@@ -58,28 +59,16 @@ JointHandler::JointState::UniquePtr JointHandler::getJointState(
 
 bool JointHandler::getEndPose(const std::array<double, 4> & joints, Pose & pose)
 {
-  Eigen::MatrixXd pos(3, 1);
-  Eigen::MatrixXd p(3, 1);
+  const Eigen::Vector3d pos =
+    mg400_common::kinematics::LINK1 +
+    rotY(mg400_common::kinematics::LINK2, joints.at(1)) +
+    rotY(mg400_common::kinematics::LINK3, joints.at(2)) +
+    mg400_common::kinematics::LINK4;
+  const Eigen::Vector3d p = rotZ(pos, joints.at(0));
 
-  Eigen::MatrixXd LINK1(3, 1);
-  Eigen::MatrixXd LINK2(3, 1);
-  Eigen::MatrixXd LINK3(3, 1);
-  Eigen::MatrixXd LINK4(3, 1);
-
-  LINK1 << mg400_common::LINK1_X, mg400_common::LINK1_Y, mg400_common::LINK1_Z;
-  LINK2 << mg400_common::LINK2_X, mg400_common::LINK2_Y, mg400_common::LINK2_Z;
-  LINK3 << mg400_common::LINK3_X, mg400_common::LINK3_Y, mg400_common::LINK3_Z;
-  LINK4 << mg400_common::LINK4_X, mg400_common::LINK4_Y, mg400_common::LINK4_Z;
-
-  pos = LINK1 +
-    rotY(LINK2, joints.at(1)) +
-    rotY(LINK3, joints.at(2)) +
-    LINK4;
-  p = rotZ(pos, joints.at(0));
-
-  pose.position.x = static_cast<double>(p(0, 0));
-  pose.position.y = static_cast<double>(p(1, 0));
-  pose.position.z = static_cast<double>(p(2, 0));
+  pose.position.x = p.x();
+  pose.position.y = p.y();
+  pose.position.z = p.z();
 
   tf2::Quaternion quat;
   quat.setRPY(0.0, 0.0, joints.at(0) + joints.at(3));
@@ -108,7 +97,7 @@ bool JointHandler::getEndPose(const JointState::ConstSharedPtr joint_state, Pose
 }
 
 
-Eigen::MatrixXd JointHandler::rotY(const Eigen::MatrixXd & vec, const double & angle)
+Eigen::Vector3d JointHandler::rotY(const Eigen::Vector3d & vec, const double & angle)
 {
   Eigen::Matrix3d rot_mat;
   const double co = cos(angle);
@@ -122,7 +111,7 @@ Eigen::MatrixXd JointHandler::rotY(const Eigen::MatrixXd & vec, const double & a
   return rot_mat * vec;
 }
 
-Eigen::MatrixXd JointHandler::rotZ(const Eigen::MatrixXd & vec, const double & angle)
+Eigen::Vector3d JointHandler::rotZ(const Eigen::Vector3d & vec, const double & angle)
 {
   Eigen::Matrix3d rot_mat;
   const double co = cos(angle);

@@ -17,6 +17,8 @@
 #include <cmath>
 #include <stdexcept>
 
+#include "mg400_common/kinematics.hpp"
+
 namespace
 {
 

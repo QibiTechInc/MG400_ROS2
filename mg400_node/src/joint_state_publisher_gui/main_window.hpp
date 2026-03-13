@@ -21,7 +21,6 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 
-#include <mg400_common/mg400_ik_util.hpp>
 #include <mg400_interface/joint_handler.hpp>
 
 QT_BEGIN_NAMESPACE
