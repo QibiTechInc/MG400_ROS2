@@ -17,6 +17,12 @@ ament_auto_add_executable(${TARGET} src/${TARGET}.cpp)
 target_link_libraries(${TARGET} yaml-cpp)
 unset(TARGET)
 
+# validate_kinematics_with_solutions =============
+set(TARGET validate_kinematics_with_solutions)
+ament_auto_add_executable(${TARGET} src/${TARGET}.cpp)
+ament_target_dependencies(${TARGET} mg400_common)
+unset(TARGET)
+
 # install config files ============================
 install(
   DIRECTORY config
