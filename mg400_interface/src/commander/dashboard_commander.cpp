@@ -18,6 +18,43 @@ namespace mg400_interface
 {
 using namespace std::chrono_literals;  // NOLINT
 
+namespace
+{
+
+std::vector<double> takePositiveSolutionPose(const DashboardResponse & response)
+{
+  const auto value_count = ResponseParser::countArrayElements(response.ret_val);
+  if (value_count == 4) {
+    return ResponseParser::takeCartesianPoseArray4(response.ret_val);
+  }
+  if (value_count == 6) {
+    const auto full_pose = ResponseParser::takeCartesianPoseArray(response.ret_val);
+    return {full_pose.at(0), full_pose.at(1), full_pose.at(2), full_pose.at(5)};
+  }
+  throw std::runtime_error("Unexpected PositiveSolution response length.");
+}
+
+std::vector<double> takeInverseSolutionJoints(const DashboardResponse & response)
+{
+  const auto value_count = ResponseParser::countArrayElements(response.ret_val);
+  if (value_count == 4) {
+    return ResponseParser::takeAngleArray4(response.ret_val);
+  }
+  if (value_count == 6) {
+    const auto full_joints = ResponseParser::takeAngleArray(response.ret_val);
+    return {full_joints.at(0), full_joints.at(1), full_joints.at(2), full_joints.at(3)};
+  }
+  throw std::runtime_error("Unexpected InverseSolution response length.");
+}
+
+bool isAcceptedLegacyFourAxisResponse(const DashboardResponse & response)
+{
+  return response.error_id == -1 &&
+         ResponseParser::countArrayElements(response.ret_val) == 4;
+}
+
+}  // namespace
+
 DashboardCommander::DashboardCommander(
   DashboardTcpInterfaceBase * tcp_if,
   const std::chrono::nanoseconds timeout)
@@ -279,6 +316,49 @@ std::vector<double> DashboardCommander::getPose()
     throw std::runtime_error("Dobot not return 0: " + std::to_string(response.error_id));
   }
   return ResponseParser::takePoseArray(response.ret_val);
+}
+
+std::vector<double> DashboardCommander::positiveSolution(
+  const double joint1, const double joint2, const double joint3,
+  const double joint4,
+  const User::_user_type & user, const Tool::_tool_type & tool)
+{
+  static char buf[256];
+  static DashboardResponse response;
+  const int cx = snprintf(
+    buf, sizeof(buf),
+    "PositiveSolution(%.6lf,%.6lf,%.6lf,%.6lf,%.6lf,%.6lf,%u,%u)",
+    rad2degree(joint1), rad2degree(joint2), rad2degree(joint3),
+    rad2degree(joint4), 0.0, 0.0,
+    user, tool);
+  ResponseParser::parseResponse(
+    this->sendAndWaitResponse(std::string(buf, cx)), response);
+  if (response.error_id != 0 && !isAcceptedLegacyFourAxisResponse(response)) {
+    throw DashboardCommandException(response);
+  }
+  return takePositiveSolutionPose(response);
+}
+
+std::vector<double> DashboardCommander::inverseSolution(
+  const double pose1, const double pose2, const double pose3,
+  const double pose4,
+  const User::_user_type & user, const Tool::_tool_type & tool)
+{
+  static char buf[256];
+  static DashboardResponse response;
+  const int cx = snprintf(
+    buf, sizeof(buf),
+    "InverseSolution(%.6lf,%.6lf,%.6lf,%.6lf,%.6lf,%.6lf,%u,%u)",
+    m2mm(pose1), m2mm(pose2), m2mm(pose3),
+    // MG400 4-axis pose r (j1 + j4) round-trips through the dashboard Rx slot.
+    rad2degree(pose4), 0.0, 0.0,
+    user, tool);
+  ResponseParser::parseResponse(
+    this->sendAndWaitResponse(std::string(buf, cx)), response);
+  if (response.error_id != 0 && !isAcceptedLegacyFourAxisResponse(response)) {
+    throw DashboardCommandException(response);
+  }
+  return takeInverseSolutionJoints(response);
 }
 
 void DashboardCommander::emergencyStop()

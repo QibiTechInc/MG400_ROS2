@@ -2,13 +2,14 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>mg400_tools</name>
-  <version>1.0.0</version>
+  <version>1.1.0</version>
   <description>A ROS 2 C++ package</description>
   <maintainer email="yuki.yamamoto@harvestx.jp">Yuki Yamamoto</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
 
+  <depend>mg400_common</depend>
   <depend>mg400_msgs</depend>
   <depend>rclcpp_action</depend>
   <depend>rclcpp</depend>

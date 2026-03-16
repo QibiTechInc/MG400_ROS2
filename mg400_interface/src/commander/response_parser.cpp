@@ -14,8 +14,46 @@
 
 #include "mg400_interface/commander/response_parser.hpp"
 
+#include <sstream>
+
 namespace mg400_interface
 {
+namespace
+{
+
+std::vector<double> takeScaledArray(
+  const std::string & response,
+  const std::vector<double> & scales)
+{
+  std::vector<double> ret(scales.size());
+  std::string buf;
+  size_t idx = 0;
+  for (auto s : response) {
+    if (s == '{' || s == ' ' || s == '\n' || s == '\t') {
+      continue;
+    }
+
+    if (s == ',' || s == '}') {
+      if (buf.empty()) {
+        continue;
+      }
+      ret.at(idx) = std::stod(buf) * scales.at(idx);
+      buf.clear();
+      idx++;
+      continue;
+    }
+
+    buf.push_back(s);
+  }
+
+  if (idx != scales.size()) {
+    throw std::runtime_error("Unexpected array length: " + std::to_string(idx));
+  }
+  return ret;
+}
+
+}  // namespace
+
 bool ResponseParser::parseResponse(
   const std::string & packet,
   DashboardResponse & response)
@@ -66,6 +104,26 @@ bool ResponseParser::parseResponse(
   return false;
 }
 
+size_t ResponseParser::countArrayElements(const std::string & response)
+{
+  size_t count = 0;
+  bool in_value = false;
+  for (auto s : response) {
+    if (s == '{' || s == ' ' || s == '\n' || s == '\t') {
+      continue;
+    }
+    if (s == ',' || s == '}') {
+      if (in_value) {
+        count++;
+        in_value = false;
+      }
+      continue;
+    }
+    in_value = true;
+  }
+  return count;
+}
+
 std::array<std::vector<int>, 6> ResponseParser::takeErrorMessage(
   const std::string & response)
 {
@@ -107,49 +165,35 @@ std::array<std::vector<int>, 6> ResponseParser::takeErrorMessage(
 std::vector<double> ResponseParser::takePoseArray(
   const std::string & response)
 {
-  std::vector<double> ret(6);
-  std::string buf;
-  size_t idx = 0;
-  for (auto s : response) {
-    if (s == '{') {
-      continue;
-    }
+  return takeScaledArray(
+    response, {TO_M, TO_M, TO_M, TO_M, TO_M, TO_M});
+}
 
-    if (s == ',' || s == '}') {
-      // mm -> m
-      ret.at(idx) = std::stod(buf) * TO_M;
-      buf.clear();
-      idx++;
-      continue;
-    }
+std::vector<double> ResponseParser::takeCartesianPoseArray(
+  const std::string & response)
+{
+  return takeScaledArray(
+    response, {TO_M, TO_M, TO_M, TO_RADIAN, TO_RADIAN, TO_RADIAN});
+}
 
-    buf.push_back(s);
-  }
-  return ret;
+std::vector<double> ResponseParser::takeCartesianPoseArray4(
+  const std::string & response)
+{
+  return takeScaledArray(response, {TO_M, TO_M, TO_M, TO_RADIAN});
 }
 
 std::vector<double> ResponseParser::takeAngleArray(
   const std::string & response)
 {
-  std::vector<double> ret(6);
-  std::string buf;
-  size_t idx = 0;
-  for (auto s : response) {
-    if (s == '{') {
-      continue;
-    }
+  return takeScaledArray(
+    response, {TO_RADIAN, TO_RADIAN, TO_RADIAN, TO_RADIAN, TO_RADIAN, TO_RADIAN});
+}
 
-    if (s == ',' || s == '}') {
-      // degree -> radian
-      ret.at(idx) = std::stod(buf) * TO_RADIAN;
-      buf.clear();
-      idx++;
-      continue;
-    }
-
-    buf.push_back(s);
-  }
-  return ret;
+std::vector<double> ResponseParser::takeAngleArray4(
+  const std::string & response)
+{
+  return takeScaledArray(
+    response, {TO_RADIAN, TO_RADIAN, TO_RADIAN, TO_RADIAN});
 }
 
 int ResponseParser::takeInt(const std::string & response)

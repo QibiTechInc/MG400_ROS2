@@ -65,9 +65,19 @@
     <description>Get error id</description>
   </class>
   <class
+      type="mg400_plugin::InverseSolution"
+      base_class_type="mg400_plugin_base::DashboardApiPluginBase">
+    <description>Inverse solution</description>
+  </class>
+  <class
       type="mg400_plugin::PayLoad"
       base_class_type="mg400_plugin_base::DashboardApiPluginBase">
     <description>Pay load</description>
+  </class>
+  <class
+      type="mg400_plugin::PositiveSolution"
+      base_class_type="mg400_plugin_base::DashboardApiPluginBase">
+    <description>Positive solution</description>
   </class>
   <class
       type="mg400_plugin::ResetRobot"

@@ -16,9 +16,9 @@
 #define __MG400_INTERFACE_COMMANDER_DASHBOARD_COMMANDER_HPP__
 
 #include <array>
-#include <vector>
 #include <string>
 #include <memory>
+#include <vector>
 
 #include <mg400_msgs/msg/arch.hpp>
 #include <mg400_msgs/msg/collision_level.hpp>
@@ -140,6 +140,14 @@ public:
   std::vector<double> getAngle();
 
   std::vector<double> getPose();
+
+  std::vector<double> positiveSolution(
+    const double, const double, const double, const double,
+    const User::_user_type &, const Tool::_tool_type &);
+
+  std::vector<double> inverseSolution(
+    const double, const double, const double, const double,
+    const User::_user_type &, const Tool::_tool_type &);
 
   void emergencyStop();
 /*

@@ -14,7 +14,7 @@
 
 
 #include <gtest/gtest.h>
-#include <mg400_common/mg400_ik_util.hpp>
+#include <mg400_common/kinematics.hpp>
 #include <mg400_interface/mg400_interface.hpp>
 
 
@@ -35,15 +35,14 @@ TEST_F(TestJointHandler, getEndPoint)
   geometry_msgs::msg::Pose actual;
   const auto ret = mg400_interface::JointHandler::getEndPose(js, actual);
   ASSERT_TRUE(ret);
-  double eq_x = mg400_common::LINK1_X + mg400_common::LINK2_X + mg400_common::LINK3_X +
-    mg400_common::LINK4_X;
-  double eq_y = mg400_common::LINK1_Y + mg400_common::LINK2_Y + mg400_common::LINK3_Y +
-    mg400_common::LINK4_Y;
-  double eq_z = mg400_common::LINK1_Z + mg400_common::LINK2_Z + mg400_common::LINK3_Z +
-    mg400_common::LINK4_Z;
-  EXPECT_DOUBLE_EQ(eq_x, actual.position.x);
-  EXPECT_DOUBLE_EQ(eq_y, actual.position.y);
-  EXPECT_DOUBLE_EQ(eq_z, actual.position.z);
+  const Eigen::Vector3d expected_position =
+    mg400_common::kinematics::LINK1 +
+    mg400_common::kinematics::LINK2 +
+    mg400_common::kinematics::LINK3 +
+    mg400_common::kinematics::LINK4;
+  EXPECT_DOUBLE_EQ(expected_position.x(), actual.position.x);
+  EXPECT_DOUBLE_EQ(expected_position.y(), actual.position.y);
+  EXPECT_DOUBLE_EQ(expected_position.z(), actual.position.z);
   EXPECT_DOUBLE_EQ(1.0, actual.orientation.w);
   EXPECT_DOUBLE_EQ(0.0, actual.orientation.x);
   EXPECT_DOUBLE_EQ(0.0, actual.orientation.y);

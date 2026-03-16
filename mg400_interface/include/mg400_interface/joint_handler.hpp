@@ -24,7 +24,6 @@
 #include <string>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
-#include <mg400_common/mg400_ik_util.hpp>
 #include "mg400_interface/command_utils.hpp"
 
 namespace mg400_interface
@@ -58,8 +57,8 @@ public:
   static bool getEndPose(const JointState::ConstSharedPtr, Pose &);
 
 private:
-  static Eigen::MatrixXd rotY(const Eigen::MatrixXd &, const double &);
-  static Eigen::MatrixXd rotZ(const Eigen::MatrixXd &, const double &);
+  static Eigen::Vector3d rotY(const Eigen::Vector3d &, const double &);
+  static Eigen::Vector3d rotZ(const Eigen::Vector3d &, const double &);
 };
 }  // namespace mg400_interface
 #endif

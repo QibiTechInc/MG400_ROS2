@@ -13,18 +13,23 @@ The following API interface plugin will be loaded by default
   - `DisableRobot`
   - `EmergencyStop`
   - `EnableRobot`
+  - `GetErrorID`
+  - `InverseSolution`
   - `PayLoad`
+  - `PositiveSolution`
   - `ResetRobot`
   - `SetCollisionLevel`
   - `SpeedFactor`
   - `ToolDOExecute`
   - `ToolDI`
 - Motion API
+  - `CommandQueue` (detailed [here](../doc/ComanndQueue.md))
+  - `JointMovJ`
   - `MoveJog`
   - `MovJ`
+  - `MovJIO`
   - `MovL`
-  - `JointMovJ`
-  - `CommandQueue` (detailed [here](../doc/ComanndQueue.md))
+  - `MovLIO`
 
 ## Joint State Publisher Gui
 
