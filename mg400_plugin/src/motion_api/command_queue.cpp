@@ -89,7 +89,14 @@ rclcpp_action::CancelResponse CommandQueue::handle_cancel(
 {
   RCLCPP_INFO(
     this->node_logging_if_->get_logger(), "Received request to cancel goal");
-  // TODO(anyone): Should stop movJ
+  try {
+    this->mg400_interface_->dashboard_commander->resetRobot();
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(
+      this->node_logging_if_->get_logger(), "ResetRobot failed on cancel: %s", e.what());
+    return rclcpp_action::CancelResponse::REJECT;
+  }
+  cancel_requested_ = true;
   return rclcpp_action::CancelResponse::ACCEPT;
 }
 
@@ -103,6 +110,7 @@ void CommandQueue::handle_accepted(
 
 void CommandQueue::execute(const std::shared_ptr<GoalHandle> goal_handle)
 {
+  cancel_requested_ = false;
   rclcpp::Rate control_freq(10);  // Hz
 
   const auto & goal = goal_handle->get_goal();
@@ -282,6 +290,12 @@ void CommandQueue::execute(const std::shared_ptr<GoalHandle> goal_handle)
     batch_start < goal->commands.size();
     batch_start += enable_sync_every)
   {
+    if (cancel_requested_) {
+      RCLCPP_INFO(this->node_logging_if_->get_logger(), "command_queue cancelled");
+      result->result = false;
+      goal_handle->canceled(result);
+      return;
+    }
     const size_t batch_end = std::min(batch_start + enable_sync_every, goal->commands.size());
     const int sent_in_batch = this->sendCommand(goal->commands, batch_start, batch_end);
     sent_command_count += sent_in_batch;
