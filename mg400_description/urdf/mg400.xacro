@@ -448,8 +448,8 @@
       <child link="${prefix}mg400_link1" />
       <axis xyz="0 0 1" />
       <limit
-          lower="${-180.0 * const.TO_RADIAN}"
-          upper="${180.0 * const.TO_RADIAN}"
+          lower="${-160.0 * const.TO_RADIAN}"
+          upper="${160.0 * const.TO_RADIAN}"
           effort="0"
           velocity="0" />
     </joint>
@@ -463,8 +463,8 @@
       <child link="${prefix}mg400_link2_1" />
       <axis xyz="0 1 0" />
       <limit
-          lower="-3.14"
-          upper="3.14"
+          lower="${-25.0 * const.TO_RADIAN}"
+          upper="${85.0 * const.TO_RADIAN}"
           effort="0"
           velocity="0" />
     </joint>
@@ -493,8 +493,8 @@
       <child link="${prefix}mg400_link3_1" />
       <axis xyz="0 1 0" />
       <limit
-          lower="-3.14"
-          upper="3.14"
+          lower="${-60.0 * const.TO_RADIAN}"
+          upper="${60.0 * const.TO_RADIAN}"
           effort="0"
           velocity="0" />
     </joint>
@@ -571,8 +571,8 @@
       <child link="${prefix}mg400_end_effector_flange" />
       <axis xyz="0 0 1" />
       <limit
-          lower="${-180.0 * const.TO_RADIAN}"
-          upper="${180.0 * const.TO_RADIAN}"
+          lower="${-160.0 * const.TO_RADIAN}"
+          upper="${160.0 * const.TO_RADIAN}"
           effort="0"
           velocity="0" />
     </joint>
