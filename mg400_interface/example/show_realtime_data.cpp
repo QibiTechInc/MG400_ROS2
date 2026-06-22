@@ -20,7 +20,7 @@
 
 int main(int argc, char ** argv)
 {
-  std::string ip = "127.0.0.1";
+  std::string ip = "192.168.0.6";
   if (argc == 2) {
     ip = argv[1];
   }

@@ -103,6 +103,13 @@ public:
     const DOIndex::_index_type &,
     const DOStatus::_status_type &) const;
 
+  void DOGroup(
+    const std::vector<DOIndex> &,
+    const std::vector<DOStatus> &) const;
+  void DOGroup(
+        const std::vector<DOIndex::_index_type> &,
+        const std::vector<DOStatus::_status_type> &) const;
+
   void toolDOExecute(
     const ToolDOIndex &,
     const DOStatus &) const;
