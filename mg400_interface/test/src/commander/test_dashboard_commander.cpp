@@ -242,6 +242,20 @@ TEST_F(TestDashboardCommander, DO) {
       DOIndex::D12, DOStatus::HIGH));
 }
 
+TEST_F(TestDashboardCommander, DOGroup) {
+  std::vector<DOIndex::_index_type> indices = {1, 2};
+  std::vector<DOStatus::_status_type> statuses = {DOStatus::HIGH, DOStatus::LOW};
+
+  EXPECT_CALL(
+    mock, sendCommand(StrEq("DOGroup(1,1,2,0)"))).Times(1);
+  EXPECT_CALL(
+    mock, recvResponse()).WillOnce(
+    Return("0,{},DOGroup(1,1,2,0);"));
+
+  ASSERT_NO_THROW(
+    commander->DOGroup(indices, statuses));
+}
+
 TEST_F(TestDashboardCommander, ToolDOExecute) {
   EXPECT_CALL(
     mock, sendCommand(StrEq("ToolDOExecute(2,1)"))).Times(1);

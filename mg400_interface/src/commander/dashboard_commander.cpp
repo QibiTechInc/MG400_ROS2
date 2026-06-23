@@ -179,6 +179,48 @@ void DashboardCommander::DO(
   this->evaluateResponse(this->sendAndWaitResponse(std::string(buf, cx)));
 }
 
+void DashboardCommander::DOGroup(
+  const std::vector<DOIndex> & do_indices,
+  const std::vector<DOStatus> & do_statuses) const
+{
+  if (do_indices.size() != do_statuses.size()) {
+    throw std::runtime_error("DOGroup: indices and statuses size mismatch");
+  }
+
+  std::vector<DOIndex::_index_type> indices;
+  std::vector<DOStatus::_status_type> statuses;
+  indices.reserve(do_indices.size());
+  statuses.reserve(do_statuses.size());
+  for (size_t i = 0; i < do_indices.size(); ++i) {
+    indices.push_back(do_indices[i].index);
+    statuses.push_back(do_statuses[i].status);
+  }
+  this->DOGroup(indices, statuses);
+}
+
+void DashboardCommander::DOGroup(
+  const std::vector<DOIndex::_index_type> & do_indices,
+  const std::vector<DOStatus::_status_type> & do_statuses) const
+{
+  if (do_indices.size() != do_statuses.size()) {
+    throw std::runtime_error("DOGroup: indices and statuses size mismatch");
+  }
+
+  if (do_indices.empty()) {
+    return;
+  }
+
+  std::string command = "DOGroup(";
+  for (size_t i = 0; i < do_indices.size(); ++i){
+    command += std::to_string(do_indices[i]) + "," + std::to_string(do_statuses[i]);
+    if (i < do_indices.size() - 1) {
+      command += ",";
+    }
+  }
+  command += ")";
+  this->evaluateResponse(this->sendAndWaitResponse(command));
+}
+
 void DashboardCommander::toolDOExecute(
   const ToolDOIndex & tool_do_index, const DOStatus & do_status) const
 {
